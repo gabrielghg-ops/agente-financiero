@@ -8,8 +8,9 @@ from openai import OpenAI
 
 TELEGRAM_TOKEN = "8618097270:AAEEO0LqKcucsQgcVMMbLkmF76Uuvoh81zU"
 CHAT_ID = "7703343025"
-OPENAI_API_KEY = "OPENAI_API_KEY"
+import os
 
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # ETFs a analizar
