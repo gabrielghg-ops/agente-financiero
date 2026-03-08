@@ -1,42 +1,21 @@
 import yfinance as yf
-import pandas as pd
 
-def rsi(series, period=14):
+def analizar_macro():
 
-    delta = series.diff()
+    try:
+        spy = yf.download("SPY", period="3mo")["Close"]
+        gld = yf.download("GLD", period="3mo")["Close"]
 
-    gain = (delta.where(delta > 0, 0)).rolling(period).mean()
+        spy_change = spy.pct_change().mean()
+        gold_change = gld.pct_change().mean()
 
-    loss = (-delta.where(delta < 0, 0)).rolling(period).mean()
+        if spy_change > 0 and gold_change < 0:
+            return "📈 Mercado en modo RISK ON"
 
-    rs = gain / loss
+        if spy_change < 0 and gold_change > 0:
+            return "⚠ Mercado en modo RISK OFF"
 
-    return 100 - (100/(1+rs))
+        return "➖ Mercado lateral"
 
-
-def analizar_activo(ticker):
-
-    df = yf.download(ticker, period="6mo")
-
-    df["RSI"] = rsi(df["Close"])
-
-    last = df.iloc[-1]
-
-    if last["RSI"] < 35:
-
-        signal = "🟢 COMPRA"
-
-    elif last["RSI"] > 70:
-
-        signal = "🔴 VENTA"
-
-    else:
-
-        signal = "🟡 MANTENER"
-
-    return {
-        "ticker": ticker,
-        "price": round(last["Close"],2),
-        "rsi": round(last["RSI"],1),
-        "signal": signal
-    }
+    except:
+        return "No se pudo analizar macro"
