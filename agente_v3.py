@@ -1,84 +1,66 @@
-import yfinance as yf
-import pandas as pd
-import requests
 import os
-from openai import OpenAI
+import requests
+import schedule
+import time
 
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+from cartera_reader import obtener_cartera
+from oportunidades import analizar_activo
+from macro import analizar_macro
+from noticias import analizar_noticias
 
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 
-tickers = [
-"SPY","MELI","GOOGL","GLD","SLV","IBIT",
-"EWZ","EEM","PAMP","YPF"
-]
+def enviar_telegram(msg):
 
-def rsi(series, period=14):
-    delta = series.diff()
-    gain = (delta.where(delta > 0, 0)).rolling(period).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(period).mean()
-    rs = gain / loss
-    return 100 - (100/(1+rs))
+    url=f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 
-def analizar_tecnico(ticker):
+    requests.post(url,data={
+        "chat_id":CHAT_ID,
+        "text":msg
+    })
 
-    df = yf.download(ticker, period="3mo")
 
-    df["RSI"] = rsi(df["Close"])
+def run_agent():
 
-    last = df.iloc[-1]
+    cartera = obtener_cartera()
 
-    if last["RSI"] < 35:
-        signal="COMPRA"
-    elif last["RSI"] > 70:
-        signal="VENTA"
-    else:
-        signal="MANTENER"
+    report = "📊 REPORTE FINANCIERO DIARIO\n\n"
 
-    return {
-        "ticker":ticker,
-        "price":round(last["Close"],2),
-        "rsi":round(last["RSI"],1),
-        "signal":signal
-    }
+    macro = analizar_macro()
 
-def analizar_noticias():
+    report += f"Macro:\n{macro}\n\n"
 
-    prompt="""
-    Resume las noticias financieras globales
-    y su impacto probable en los mercados.
-    """
+    report += "Cartera:\n"
 
-    response = client.responses.create(
-        model="gpt-4.1-mini",
-        input=prompt
-    )
+    for ticker in cartera:
 
-    return response.output_text
+        try:
 
-report="📊 REPORTE FINANCIERO DIARIO\n\n"
+            r = analizar_activo(ticker)
 
-for t in tickers:
-
-    r=analizar_tecnico(t)
-
-    report+=f"""
+            report += f"""
 {r['ticker']}
 Precio: {r['price']}
 RSI: {r['rsi']}
 Señal: {r['signal']}
-
 """
 
-news=analizar_noticias()
+        except:
+            pass
 
-report+="\nNoticias y macro:\n"
-report+=news
+    noticias = analizar_noticias()
 
-url=f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    report += "\nNoticias relevantes:\n"
+    report += noticias
 
-requests.post(url,data={
-"chat_id":CHAT_ID,
-"text":report
-})
+    enviar_telegram(report)
+
+
+schedule.every().day.at("09:00").do(run_agent)
+
+while True:
+
+    schedule.run_pending()
+
+    time.sleep(60)
