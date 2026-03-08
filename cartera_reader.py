@@ -2,23 +2,50 @@ import pandas as pd
 import pdfplumber
 import re
 
-def leer_excel_santander(path):
+# lista básica de palabras que NO son tickers
+PALABRAS_INVALIDAS = {
+"BONOS","FCI","MEP","USD","ARS","DEL","INC","VOTO",
+"TOMO","REGS","REP","ARG","ADS"
+}
 
-    df = pd.read_excel(path)
+def limpiar_tickers(lista):
 
     tickers = []
 
-    for col in df.columns:
-        for val in df[col].astype(str):
-            if re.match(r'^[A-Z]{2,6}$', val):
-                tickers.append(val)
+    for t in lista:
+
+        t = t.strip().upper()
+
+        if len(t) > 5:
+            continue
+
+        if t in PALABRAS_INVALIDAS:
+            continue
+
+        if not re.match(r'^[A-Z]{2,5}$', t):
+            continue
+
+        tickers.append(t)
 
     return list(set(tickers))
 
 
+def leer_excel_santander(path):
+
+    df = pd.read_excel(path)
+
+    posibles = []
+
+    for col in df.columns:
+        for val in df[col].astype(str):
+            posibles.append(val)
+
+    return limpiar_tickers(posibles)
+
+
 def leer_pdf_balanz(path):
 
-    tickers = []
+    posibles = []
 
     with pdfplumber.open(path) as pdf:
 
@@ -28,9 +55,9 @@ def leer_pdf_balanz(path):
 
             matches = re.findall(r'\b[A-Z]{2,5}\b', text)
 
-            tickers.extend(matches)
+            posibles.extend(matches)
 
-    return list(set(tickers))
+    return limpiar_tickers(posibles)
 
 
 def obtener_cartera():
