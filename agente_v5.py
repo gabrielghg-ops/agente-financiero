@@ -5,6 +5,7 @@ import time
 from cartera_reader import obtener_cartera
 from oportunidades import analizar_activo
 from macro.macro_engine import analizar_macro_global
+from macro.macro_ai_report import generar_informe_ia
 from noticias import analizar_noticias
 
 
@@ -36,12 +37,15 @@ def run_agent():
 
     report = "📊 REPORTE DEL AGENTE\n\n"
 
+    cartera_texto = ""
+
     # MACRO
+
     macro = analizar_macro_global()
 
-    report += f"Macro:\n{macro}\n\n"
+    report += f"{macro}\n\n"
 
-    report += "Cartera:\n"
+    report += "📈 CARTERA ANALIZADA\n"
 
     for ticker in cartera:
 
@@ -54,23 +58,24 @@ def run_agent():
             if r is None:
                 continue
 
-            # si devuelve bool (version vieja)
             if isinstance(r, bool):
 
-                report += f"""
-{ticker}
-Señal: {'alcista' if r else 'bajista'}
-"""
+                texto = f"{ticker} señal {'alcista' if r else 'bajista'}"
 
-            # si devuelve diccionario (version nueva)
+                report += texto + "\n"
+                cartera_texto += texto + "\n"
+
             elif isinstance(r, dict):
 
-                report += f"""
+                texto = f"""
 {r.get('ticker',ticker)}
 Precio: {r.get('price','?')}
 Media50: {r.get('ma50','?')}
 Señal: {r.get('signal','?')}
 """
+
+                report += texto
+                cartera_texto += texto
 
         except Exception as e:
 
@@ -79,11 +84,12 @@ Señal: {r.get('signal','?')}
             continue
 
     # NOTICIAS
+
     try:
 
         noticias = analizar_noticias()
 
-        report += "\nNoticias relevantes:\n"
+        report += "\n📰 NOTICIAS RELEVANTES\n"
 
         if noticias:
             report += str(noticias)
@@ -92,9 +98,16 @@ Señal: {r.get('signal','?')}
 
     except Exception as e:
 
-        report += "\nNoticias relevantes:\nError obteniendo noticias"
+        report += "\nError obteniendo noticias"
 
-        print("Error noticias:", e)
+    # INFORME IA
+
+    print("Generando informe estratégico con IA...")
+
+    informe_ia = generar_informe_ia(macro, cartera_texto)
+
+    report += "\n\n🧠 INFORME ESTRATÉGICO IA\n"
+    report += informe_ia
 
     enviar_telegram(report)
 
