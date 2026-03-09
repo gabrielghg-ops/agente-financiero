@@ -6,6 +6,7 @@ def limpiar_ticker(ticker):
 
     ticker = ticker.strip().upper()
 
+    # Correcciones comunes
     correcciones = {
         "BRK": "BRK-B",
         "BRKB": "BRK-B",
@@ -17,6 +18,29 @@ def limpiar_ticker(ticker):
 
     ticker = ticker.replace(".", "-")
 
+    # Acciones argentinas (Yahoo necesita .BA)
+    argentinas = [
+        "BYMA",
+        "YPFD",
+        "PAMP",
+        "CEPU",
+        "GGAL",
+        "LOMA",
+        "VIST"
+    ]
+
+    if ticker in argentinas:
+        ticker = ticker + ".BA"
+
+    # Criptos
+    criptos = {
+        "BTC": "BTC-USD",
+        "ETH": "ETH-USD"
+    }
+
+    if ticker in criptos:
+        ticker = criptos[ticker]
+
     return ticker
 
 
@@ -24,16 +48,38 @@ def obtener_cartera():
 
     tickers = set()
 
-    with pdfplumber.open("cartera.pdf") as pdf:
+    palabras_ignorar = [
+        "USD",
+        "ARS",
+        "TOTAL",
+        "SALDO",
+        "VALOR",
+        "CANTIDAD"
+    ]
 
-        for page in pdf.pages:
+    try:
 
-            text = page.extract_text()
+        with pdfplumber.open("cartera.pdf") as pdf:
 
-            encontrados = re.findall(r'\b[A-Z]{2,5}\b', text)
+            for page in pdf.pages:
 
-            for t in encontrados:
+                text = page.extract_text()
 
-                tickers.add(limpiar_ticker(t))
+                encontrados = re.findall(r'\b[A-Z]{2,6}\b', text)
 
-    return list(tickers)
+                for t in encontrados:
+
+                    if t in palabras_ignorar:
+                        continue
+
+                    ticker = limpiar_ticker(t)
+
+                    tickers.add(ticker)
+
+    except Exception as e:
+
+        print(f"Error leyendo cartera: {e}")
+
+        return []
+
+    return sorted(list(tickers))
