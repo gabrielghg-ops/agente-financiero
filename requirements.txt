@@ -1,8 +1,5 @@
+pdfplumber
 yfinance
 pandas
-numpy
 requests
-openai
-pdfplumber
-openpyxl
 schedule

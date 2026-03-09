@@ -1,51 +1,39 @@
-import re
 import pdfplumber
+import re
 
 
-def limpiar_ticker(t):
+def limpiar_ticker(ticker):
 
-    t = t.upper()
+    ticker = ticker.strip().upper()
 
-    # acciones argentinas
-    argentinos = ["YPFD","GGAL","PAMP","LOMA","BYMA","CEPU"]
+    correcciones = {
+        "BRK": "BRK-B",
+        "BRKB": "BRK-B",
+        "BRK.B": "BRK-B"
+    }
 
-    if t in argentinos:
-        return t + ".BA"
+    if ticker in correcciones:
+        ticker = correcciones[ticker]
 
-    if t == "BRKB":
-        return "BRK-B"
+    ticker = ticker.replace(".", "-")
 
-    if t == "ETHA":
-        return "ETH-USD"
-
-    return t
+    return ticker
 
 
 def obtener_cartera():
 
-    tickers = []
+    tickers = set()
 
-    with pdfplumber.open("cartera_balanz.pdf") as pdf:
-
-        text = ""
+    with pdfplumber.open("cartera.pdf") as pdf:
 
         for page in pdf.pages:
-            text += page.extract_text()
 
-    palabras = re.findall(r"\b[A-Z]{2,6}\b", text)
+            text = page.extract_text()
 
-    blacklist = [
-        "BALANZ","HOUSE","FULL","INVESTMENT",
-        "ARGENTINA","CUIT","TOTAL","USD"
-    ]
+            encontrados = re.findall(r'\b[A-Z]{2,5}\b', text)
 
-    for p in palabras:
+            for t in encontrados:
 
-        if p in blacklist:
-            continue
+                tickers.add(limpiar_ticker(t))
 
-        ticker = limpiar_ticker(p)
-
-        tickers.append(ticker)
-
-    return list(set(tickers))
+    return list(tickers)

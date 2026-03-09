@@ -1,46 +1,36 @@
 import yfinance as yf
-import pandas as pd
+
+
+def descargar_datos(ticker):
+
+    try:
+
+        data = yf.download(ticker, period="6mo", progress=False)
+
+        if data.empty:
+            return None
+
+        return data
+
+    except Exception:
+        return None
 
 
 def analizar_activo(ticker):
 
-    try:
+    data = descargar_datos(ticker)
 
-        df = yf.download(ticker, period="6mo", progress=False)
+    if data is None:
 
-        if df is None or df.empty:
-            return None
+        print(f"{ticker} sin datos")
 
-        delta = df["Close"].diff()
+        return False
 
-        gain = delta.clip(lower=0)
-        loss = -delta.clip(upper=0)
+    media50 = data["Close"].rolling(50).mean().iloc[-1]
+    precio = data["Close"].iloc[-1]
 
-        avg_gain = gain.rolling(14).mean()
-        avg_loss = loss.rolling(14).mean()
+    if precio > media50:
 
-        rs = avg_gain / avg_loss
-        rsi = 100 - (100/(1+rs))
+        return True
 
-        last_price = float(df["Close"].iloc[-1])
-        last_rsi = float(rsi.iloc[-1])
-
-        if last_rsi < 35:
-            signal = "COMPRA"
-
-        elif last_rsi > 70:
-            signal = "VENTA"
-
-        else:
-            signal = "MANTENER"
-
-        return {
-            "ticker": ticker,
-            "price": round(last_price,2),
-            "rsi": round(last_rsi,1),
-            "signal": signal
-        }
-
-    except:
-
-        return None
+    return False
