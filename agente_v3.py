@@ -17,26 +17,26 @@ def enviar_telegram(msg):
 
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 
-    requests.post(url, data={
-        "chat_id": CHAT_ID,
-        "text": msg
+    requests.post(url,data={
+        "chat_id":CHAT_ID,
+        "text":msg
     })
 
 
-# FILTRO DE TICKERS INVALIDOS
 def ticker_valido(ticker):
 
     try:
         df = yf.download(ticker, period="5d", progress=False)
 
-        if df.empty:
+        if df is None or df.empty:
             print(f"{ticker} sin datos, se ignora")
             return False
 
         return True
 
-    except:
-        print(f"{ticker} error, se ignora")
+    except Exception as e:
+
+        print(f"{ticker} error: {e}")
         return False
 
 
