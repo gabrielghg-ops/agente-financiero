@@ -25,7 +25,7 @@ def obtener_cartera():
 
     tickers = []
 
-    with pdfplumber.open("cartera.pdf") as pdf:
+    with pdfplumber.open("cartera_balanz.pdf") as pdf:
 
         text = ""
 
