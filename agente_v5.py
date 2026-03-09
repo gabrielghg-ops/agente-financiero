@@ -68,8 +68,12 @@ Señal: {r['signal']}
 
     noticias = analizar_noticias()
 
-    report += "\nNoticias relevantes:\n"
+report += "\nNoticias relevantes:\n"
+
+if noticias:
     report += noticias
+else:
+    report += "Sin noticias relevantes"
 
     enviar_telegram(report)
 
