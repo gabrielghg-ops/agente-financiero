@@ -1,45 +1,52 @@
-def calcular_risk_score(datos):
-
-    score = 50
+def generar_conclusion(datos, interpretacion, risk_score, risk_mode):
 
     vix = datos.get("vix", 0)
-    dxy = datos.get("dxy", 0)
     us10y = datos.get("us10y", 0)
 
-    # volatilidad
+    conclusion = "\n📈 CONCLUSION ESTRATEGICA\n"
 
-    if vix < 15:
-        score += 15
-    elif vix > 25:
-        score -= 15
+    conclusion += f"\nGlobal Risk Score: {risk_score}/100"
+    conclusion += f"\nModo de mercado: {risk_mode}\n"
 
-    # dolar
+    if risk_mode == "RISK ON":
 
-    if dxy > 105:
-        score -= 10
-    elif dxy < 100:
-        score += 10
+        conclusion += """
+El entorno macro muestra condiciones favorables para activos de riesgo.
 
-    # tasas
+Recomendación:
+- Mayor exposición a acciones
+- Favorecer índices
+- Crypto favorecida
+- Menor necesidad de refugio en oro
+"""
 
-    if us10y > 4.5:
-        score -= 10
-    elif us10y < 3.5:
-        score += 10
+    elif risk_mode == "RISK OFF":
 
-    if score > 100:
-        score = 100
+        conclusion += """
+El entorno macro muestra señales defensivas.
 
-    if score < 0:
-        score = 0
-
-    if score >= 65:
-        modo = "RISK ON"
-
-    elif score <= 35:
-        modo = "RISK OFF"
+Recomendación:
+- Reducir exposición a acciones
+- Favorecer activos refugio
+- Mayor cautela en crypto
+- Priorizar liquidez
+"""
 
     else:
-        modo = "NEUTRAL"
 
-    return score, modo
+        conclusion += """
+El entorno macro es mixto o incierto.
+
+Recomendación:
+- Mantener exposición moderada
+- Seleccionar activos con tendencia clara
+- Evitar sobreexposición
+"""
+
+    if vix > 30:
+        conclusion += "\n⚠ Volatilidad elevada detectada."
+
+    if us10y > 4.7:
+        conclusion += "\n⚠ Tasas elevadas pueden presionar activos de riesgo."
+
+    return conclusion
