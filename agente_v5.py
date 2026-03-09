@@ -38,6 +38,7 @@ def run_agent():
 
     # MACRO
     macro = analizar_macro()
+
     report += f"Macro:\n{macro}\n\n"
 
     report += "Cartera:\n"
@@ -53,11 +54,22 @@ def run_agent():
             if r is None:
                 continue
 
-            report += f"""
+            # si devuelve bool (version vieja)
+            if isinstance(r, bool):
+
+                report += f"""
 {ticker}
-Precio: {r['price']}
-Media50: {r['ma50']}
-Señal: {r['signal']}
+Señal: {'alcista' if r else 'bajista'}
+"""
+
+            # si devuelve diccionario (version nueva)
+            elif isinstance(r, dict):
+
+                report += f"""
+{r.get('ticker',ticker)}
+Precio: {r.get('price','?')}
+Media50: {r.get('ma50','?')}
+Señal: {r.get('signal','?')}
 """
 
         except Exception as e:
@@ -66,14 +78,23 @@ Señal: {r['signal']}
 
             continue
 
-    noticias = analizar_noticias()
+    # NOTICIAS
+    try:
 
-report += "\nNoticias relevantes:\n"
+        noticias = analizar_noticias()
 
-if noticias:
-    report += noticias
-else:
-    report += "Sin noticias relevantes"
+        report += "\nNoticias relevantes:\n"
+
+        if noticias:
+            report += str(noticias)
+        else:
+            report += "Sin noticias relevantes"
+
+    except Exception as e:
+
+        report += "\nNoticias relevantes:\nError obteniendo noticias"
+
+        print("Error noticias:", e)
 
     enviar_telegram(report)
 
