@@ -1,4 +1,5 @@
 import yfinance as yf
+import pandas as pd
 
 
 def descargar_datos(ticker):
@@ -28,22 +29,32 @@ def analizar_activo(ticker):
 
     try:
 
-        precio = float(data["Close"].iloc[-1])
-        ma50 = float(data["Close"].rolling(50).mean().iloc[-1])
+        close = data["Close"]
 
-    except Exception:
+        if len(close) < 50:
+            print(f"{ticker} pocos datos")
+            return None
 
-        print(f"{ticker} error calculando indicadores")
+        precio = close.iloc[-1]
+        ma50 = close.rolling(50).mean().iloc[-1]
+
+        if pd.isna(precio) or pd.isna(ma50):
+            print(f"{ticker} datos incompletos")
+            return None
+
+        if precio > ma50:
+            signal = "alcista"
+        else:
+            signal = "bajista"
+
+        return {
+            "ticker": ticker,
+            "price": round(float(precio),2),
+            "ma50": round(float(ma50),2),
+            "signal": signal
+        }
+
+    except Exception as e:
+
+        print(f"{ticker} error calculando indicadores:", e)
         return None
-
-    if precio > ma50:
-        signal = "alcista"
-    else:
-        signal = "bajista"
-
-    return {
-        "ticker": ticker,
-        "price": round(precio,2),
-        "ma50": round(ma50,2),
-        "signal": signal
-    }
