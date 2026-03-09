@@ -1,96 +1,55 @@
 import yfinance as yf
 
-
-def get_last_price(ticker):
+def analizar_macro():
 
     try:
 
-        df = yf.download(ticker, period="5d", progress=False)
+        vix = yf.Ticker("^VIX").history(period="1d")["Close"].iloc[-1]
+        dxy = yf.Ticker("DX-Y.NYB").history(period="1d")["Close"].iloc[-1]
+        sp500 = yf.Ticker("^GSPC").history(period="5d")["Close"]
+        us10y = yf.Ticker("^TNX").history(period="1d")["Close"].iloc[-1]
+        gold = yf.Ticker("GC=F").history(period="1d")["Close"].iloc[-1]
 
-        if df is None or df.empty:
-            return None
+        # tendencia SP500
+        if sp500.iloc[-1] > sp500.mean():
+            sp_trend = "alcista"
+        else:
+            sp_trend = "bajista"
 
-        return float(df["Close"].iloc[-1])
-
-    except:
-        return None
-
-
-def analizar_macro():
-
-    print("Analizando entorno macroeconómico...")
-
-    vix = get_last_price("^VIX")
-    tnx = get_last_price("^TNX")
-    dxy = get_last_price("DX-Y.NYB")
-    spy = get_last_price("SPY")
-
-    macro_text = "🌎 ANALISIS MACRO\n\n"
-
-    score = 0
-
-    # VIX
-    if vix:
-
-        if vix < 18:
-            macro_text += f"VIX: {round(vix,2)} (riesgo bajo)\n"
-            score += 1
-
+        # riesgo segun VIX
+        if vix < 15:
+            riesgo = "bajo"
         elif vix < 25:
-            macro_text += f"VIX: {round(vix,2)} (riesgo moderado)\n"
-
+            riesgo = "moderado"
         else:
-            macro_text += f"VIX: {round(vix,2)} (riesgo alto)\n"
-            score -= 1
+            riesgo = "alto"
 
-    # Tasas
-    if tnx:
-
-        if tnx < 3.5:
-            macro_text += f"Tasas 10Y: {round(tnx,2)}% (estímulo)\n"
-            score += 1
-
-        elif tnx > 4.5:
-            macro_text += f"Tasas 10Y: {round(tnx,2)}% (presión sobre acciones)\n"
-            score -= 1
-
+        # interpretación del dólar
+        if dxy > 104:
+            dolar = "fuerte (presión bajista en activos)"
         else:
-            macro_text += f"Tasas 10Y: {round(tnx,2)}% (neutral)\n"
+            dolar = "débil o neutral"
 
-    # Dólar
-    if dxy:
+        macro = f"""
+ANÁLISIS MACRO GLOBAL
 
-        if dxy > 105:
-            macro_text += f"Dólar fuerte: {round(dxy,2)}\n"
-            score -= 1
+Volatilidad (VIX): {vix:.2f} → Riesgo {riesgo}
 
-        elif dxy < 100:
-            macro_text += f"Dólar débil: {round(dxy,2)}\n"
-            score += 1
+Dólar (DXY): {dxy:.2f} → {dolar}
 
-        else:
-            macro_text += f"Dólar neutral: {round(dxy,2)}\n"
+Bonos USA 10Y: {us10y:.2f}%
 
-    # SPY
-    if spy:
+Oro: {gold:.0f}
 
-        macro_text += f"SPY referencia: {round(spy,2)}\n"
+Tendencia S&P500: {sp_trend}
 
-    macro_text += "\n"
+Interpretación:
+- Liquidez global condicionada por tasas.
+- Sentimiento del mercado: {riesgo}.
+- Contexto para trading: mercado {sp_trend}.
+"""
 
-    # Conclusión macro
-    if score >= 2:
+        return macro
 
-        macro_text += "🟢 Entorno RISK ON (favorable para acciones)"
-
-    elif score <= -2:
-
-        macro_text += "🔴 Entorno RISK OFF (mercado defensivo)"
-
-    else:
-
-        macro_text += "🟡 Entorno NEUTRAL"
-
-    print("Macro OK")
-
-    return macro_text
+    except Exception as e:
+        return f"Error obteniendo datos macro: {e}"
