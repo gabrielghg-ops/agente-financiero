@@ -1,69 +1,51 @@
-import pandas as pd
-import pdfplumber
 import re
-
-# lista básica de palabras que NO son tickers
-PALABRAS_INVALIDAS = {
-"BONOS","FCI","MEP","USD","ARS","DEL","INC","VOTO",
-"TOMO","REGS","REP","ARG","ADS"
-}
-
-def limpiar_tickers(lista):
-
-    tickers = []
-
-    for t in lista:
-
-        t = t.strip().upper()
-
-        if len(t) > 5:
-            continue
-
-        if t in PALABRAS_INVALIDAS:
-            continue
-
-        if not re.match(r'^[A-Z]{2,5}$', t):
-            continue
-
-        tickers.append(t)
-
-    return list(set(tickers))
+import pdfplumber
 
 
-def leer_excel_santander(path):
+def limpiar_ticker(t):
 
-    df = pd.read_excel(path)
+    t = t.upper()
 
-    posibles = []
+    # acciones argentinas
+    argentinos = ["YPFD","GGAL","PAMP","LOMA","BYMA","CEPU"]
 
-    for col in df.columns:
-        for val in df[col].astype(str):
-            posibles.append(val)
+    if t in argentinos:
+        return t + ".BA"
 
-    return limpiar_tickers(posibles)
+    if t == "BRKB":
+        return "BRK-B"
 
+    if t == "ETHA":
+        return "ETH-USD"
 
-def leer_pdf_balanz(path):
-
-    posibles = []
-
-    with pdfplumber.open(path) as pdf:
-
-        for page in pdf.pages:
-
-            text = page.extract_text()
-
-            matches = re.findall(r'\b[A-Z]{2,5}\b', text)
-
-            posibles.extend(matches)
-
-    return limpiar_tickers(posibles)
+    return t
 
 
 def obtener_cartera():
 
-    santander = leer_excel_santander("cartera_santander.xlsx")
+    tickers = []
 
-    balanz = leer_pdf_balanz("cartera_balanz.pdf")
+    with pdfplumber.open("cartera.pdf") as pdf:
 
-    return list(set(santander + balanz))
+        text = ""
+
+        for page in pdf.pages:
+            text += page.extract_text()
+
+    palabras = re.findall(r"\b[A-Z]{2,6}\b", text)
+
+    blacklist = [
+        "BALANZ","HOUSE","FULL","INVESTMENT",
+        "ARGENTINA","CUIT","TOTAL","USD"
+    ]
+
+    for p in palabras:
+
+        if p in blacklist:
+            continue
+
+        ticker = limpiar_ticker(p)
+
+        tickers.append(ticker)
+
+    return list(set(tickers))
