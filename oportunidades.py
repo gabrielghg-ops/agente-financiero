@@ -1,42 +1,52 @@
 import yfinance as yf
 import pandas as pd
 
-def rsi(series, period=14):
+# conversión de tickers locales a Yahoo
+TICKER_MAP = {
+"YPFD": "YPF",
+"PAMP": "PAMP.BA",
+"BYMA": "BYMA.BA",
+"GGAL": "GGAL.BA",
+"CEPU": "CEPU.BA",
+"LOMA": "LOMA.BA",
+}
 
-    delta = series.diff()
+def convertir_ticker(t):
 
-    gain = (delta.where(delta > 0, 0)).rolling(period).mean()
+    if t in TICKER_MAP:
+        return TICKER_MAP[t]
 
-    loss = (-delta.where(delta < 0, 0)).rolling(period).mean()
-
-    rs = gain / loss
-
-    return 100 - (100/(1+rs))
+    return t
 
 
 def analizar_activo(ticker):
 
+    ticker = convertir_ticker(ticker)
+
     df = yf.download(ticker, period="6mo")
 
-    df["RSI"] = rsi(df["Close"])
+    if df.empty:
+        return None
+
+    delta = df["Close"].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+
+    rs = gain / loss
+    rsi = 100 - (100/(1+rs))
 
     last = df.iloc[-1]
 
-    if last["RSI"] < 35:
-
+    if rsi.iloc[-1] < 35:
         signal = "🟢 COMPRA"
-
-    elif last["RSI"] > 70:
-
+    elif rsi.iloc[-1] > 70:
         signal = "🔴 VENTA"
-
     else:
-
         signal = "🟡 MANTENER"
 
     return {
         "ticker": ticker,
         "price": round(last["Close"],2),
-        "rsi": round(last["RSI"],1),
+        "rsi": round(rsi.iloc[-1],1),
         "signal": signal
     }
