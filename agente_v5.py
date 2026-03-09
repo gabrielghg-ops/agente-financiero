@@ -4,7 +4,7 @@ import time
 
 from cartera_reader import obtener_cartera
 from oportunidades import analizar_activo
-from macro import analizar_macro
+from macro.macro_engine import analizar_macro_global
 from noticias import analizar_noticias
 
 
@@ -37,7 +37,7 @@ def run_agent():
     report = "📊 REPORTE DEL AGENTE\n\n"
 
     # MACRO
-    macro = analizar_macro()
+    macro = analizar_macro_global()
 
     report += f"Macro:\n{macro}\n\n"
 
