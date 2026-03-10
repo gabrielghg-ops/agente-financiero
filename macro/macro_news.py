@@ -1,35 +1,55 @@
 import requests
+import xml.etree.ElementTree as ET
 
 
-def resumen_noticias():
+def analizar_noticias():
 
     print("Analizando noticias macro...")
 
-    texto = ""
-
     try:
 
-        url = "https://newsapi.org/v2/everything?q=economy OR inflation OR fed OR argentina&language=en&pageSize=5&sortBy=publishedAt&apiKey=demo"
+        url = "https://news.google.com/rss/search?q=stock+market+economy+war+inflation+oil&hl=en-US&gl=US&ceid=US:en"
 
-        r = requests.get(url)
+        r = requests.get(url, timeout=10)
 
-        data = r.json()
+        root = ET.fromstring(r.content)
 
-        if "articles" in data:
+        noticias_lista = []
+        riesgo = 0
 
-            for n in data["articles"][:3]:
+        for item in root.findall(".//item")[:10]:
 
-                titulo = n.get("title","")
+            titulo = item.find("title").text
 
-                texto += f"- {titulo}\n"
+            noticias_lista.append(titulo)
+
+            t = titulo.lower()
+
+            # Detectores de riesgo
+            if "war" in t or "conflict" in t:
+                riesgo += 15
+
+            if "inflation" in t or "stagflation" in t:
+                riesgo += 10
+
+            if "recession" in t:
+                riesgo += 20
+
+            if "oil" in t and "surge" in t:
+                riesgo += 10
+
+        if len(noticias_lista) == 0:
+
+            texto = "Sin noticias relevantes"
+
+        else:
+
+            texto = "\n".join(["- " + n for n in noticias_lista])
+
+        return texto, riesgo
 
     except Exception as e:
 
-        print("Error noticias:", e)
+        print("Error obteniendo noticias:", e)
 
-        texto = "No se pudieron obtener noticias"
-
-    if texto == "":
-        texto = "Sin noticias relevantes"
-
-    return texto
+        return "Sin noticias relevantes", 0
