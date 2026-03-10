@@ -1,6 +1,8 @@
 import yfinance as yf
 
 from macro.macro_news import analizar_noticias
+from macro.macro_correlation import analizar_correlaciones
+from macro.macro_conclusion import generar_conclusion
 
 
 def determinar_risk_mode(score):
@@ -21,156 +23,128 @@ def analizar_macro_global():
 
     try:
 
-        spy = yf.download("SPY", period="5d")
-        vix = yf.download("^VIX", period="5d")
-        dxy = yf.download("DX-Y.NYB", period="5d")
-        gold = yf.download("GC=F", period="5d")
-        oil = yf.download("CL=F", period="5d")
+        spy = yf.download("SPY", period="6mo")
+        vix = yf.download("^VIX", period="6mo")
+        dxy = yf.download("DX-Y.NYB", period="6mo")
+        gold = yf.download("GC=F", period="6mo")
+        oil = yf.download("CL=F", period="6mo")
 
-        spy_val = float(spy["Close"].iloc[-1].item())
-        vix_val = float(vix["Close"].iloc[-1].item())
-        dxy_val = float(dxy["Close"].iloc[-1].item())
-        gold_val = float(gold["Close"].iloc[-1].item())
-        oil_val = float(oil["Close"].iloc[-1].item())
+        # EXTRAER VALORES NUMÉRICOS
+        spy_val = float(spy["Close"].iloc[-1])
+        vix_val = float(vix["Close"].iloc[-1])
+        dxy_val = float(dxy["Close"].iloc[-1])
+        gold_val = float(gold["Close"].iloc[-1])
+        oil_val = float(oil["Close"].iloc[-1])
+
+        spy_mean = float(spy["Close"].mean())
+        vix_mean = float(vix["Close"].mean())
 
     except Exception as e:
 
-        print("Error obteniendo datos macro:", e)
+        print("Error macro:", e)
 
-        return "Error obteniendo datos macro\n"
+        return "Error obteniendo datos macro"
 
-    # -------------------------
-    # SCORE BASE DE MERCADO
-    # -------------------------
+
+    # -------------------
+    # CALCULO RISK SCORE
+    # -------------------
 
     score = 50
 
-    # SPY fuerte
-    if spy_val > spy["Close"].mean():
+    if spy_val > spy_mean:
         score += 10
     else:
         score -= 10
 
-    # volatilidad
-    if vix_val < 20:
+    if vix_val < vix_mean:
         score += 10
-    elif vix_val > 30:
-        score -= 15
-
-    # dolar fuerte
-    if dxy_val > dxy["Close"].mean():
-        score -= 5
-
-    # oro refugio
-    if gold_val > gold["Close"].mean():
-        score -= 5
-
-    # petróleo alto = inflación
-    if oil_val > oil["Close"].mean():
-        score -= 5
-
-    # -------------------------
-    # ANALISIS DE NOTICIAS
-    # -------------------------
-
-    print("Analizando noticias macro...")
-
-    noticias, riesgo_noticias = analizar_noticias()
-
-    # -------------------------
-    # SCORE FINAL
-    # -------------------------
-
-    score_total = score - riesgo_noticias
-
-    if score_total < 0:
-        score_total = 0
-
-    if score_total > 100:
-        score_total = 100
-
-    risk_mode = determinar_risk_mode(score_total)
-
-    # -------------------------
-    # CORRELACION SIMPLE
-    # -------------------------
-
-    correlacion = ""
-
-    if gold_val > gold["Close"].mean() and vix_val > 25:
-        correlacion = "Flujo hacia activos refugio"
-
-    elif spy_val > spy["Close"].mean() and vix_val < 20:
-        correlacion = "Flujo hacia activos de riesgo"
-
     else:
-        correlacion = "Mercado mixto"
+        score -= 10
 
-    # -------------------------
-    # CONCLUSION
-    # -------------------------
-
-    conclusion = ""
-
-    if risk_mode == "RISK ON":
-
-        conclusion = (
-            "El entorno macro muestra condiciones favorables para activos de riesgo.\n\n"
-            "Recomendación:\n"
-            "- Mayor exposición a acciones\n"
-            "- Favorecer índices\n"
-            "- Crypto favorecida\n"
-            "- Menor necesidad de refugio en oro\n"
-        )
-
-    elif risk_mode == "NEUTRAL":
-
-        conclusion = (
-            "El mercado se encuentra en fase de incertidumbre.\n\n"
-            "Recomendación:\n"
-            "- Mantener posiciones equilibradas\n"
-            "- Reducir apalancamiento\n"
-            "- Vigilar noticias macro\n"
-        )
-
+    if dxy_val < 105:
+        score += 5
     else:
+        score -= 5
 
-        conclusion = (
-            "El mercado muestra señales de aversión al riesgo.\n\n"
-            "Recomendación:\n"
-            "- Reducir exposición a acciones\n"
-            "- Aumentar activos defensivos\n"
-            "- Considerar oro o cash\n"
-        )
+    if gold_val > 2000:
+        score -= 5
 
-    # -------------------------
+    if oil_val > 95:
+        score -= 5
+
+
+    # -------------------
+    # NOTICIAS
+    # -------------------
+
+    noticias_texto, riesgo_noticias = analizar_noticias()
+
+    score = score - riesgo_noticias
+
+    if score < 0:
+        score = 0
+
+    if score > 100:
+        score = 100
+
+
+    # -------------------
+    # MODO DE MERCADO
+    # -------------------
+
+    risk_mode = determinar_risk_mode(score)
+
+
+    # -------------------
+    # CORRELACIONES
+    # -------------------
+
+    correlaciones = analizar_correlaciones()
+
+
+    # -------------------
+    # CONCLUSION IA
+    # -------------------
+
+    conclusion = generar_conclusion(
+        {
+            "SPY": spy_val,
+            "VIX": vix_val,
+            "DXY": dxy_val,
+            "GOLD": gold_val,
+            "OIL": oil_val
+        },
+        score,
+        noticias_texto,
+        risk_mode
+    )
+
+
+    # -------------------
     # TEXTO FINAL
-    # -------------------------
+    # -------------------
 
-    texto = f"""
+    report = f"""
 🌍 MACRO GLOBAL
 
-SPY: {round(spy_val,2)}
-VIX: {round(vix_val,2)}
-DXY: {round(dxy_val,2)}
-ORO: {round(gold_val,2)}
-PETROLEO: {round(oil_val,2)}
+SPY: {spy_val}
+VIX: {vix_val}
+DXY: {dxy_val}
+ORO: {gold_val}
+PETROLEO: {oil_val}
 
-Risk Score Mercado: {score}
-Impacto Noticias: -{riesgo_noticias}
-
-Global Risk Score: {score_total}/100
+Risk Score: {score}/100
 Modo de mercado: {risk_mode}
 
 🔗 Correlaciones:
-{correlacion}
+{correlaciones}
 
 📰 Contexto global:
-{noticias}
+{noticias_texto}
 
 📊 Conclusión estratégica:
-
 {conclusion}
 """
 
-    return texto
+    return report
