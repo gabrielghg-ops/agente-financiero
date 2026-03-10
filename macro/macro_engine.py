@@ -20,22 +20,35 @@ def analizar_macro_global():
         gold = yf.download("GC=F", period="6mo", progress=False)
         oil = yf.download("CL=F", period="6mo", progress=False)
 
-        datos["spy"] = spy["Close"].iloc[-1]
-        datos["vix"] = vix["Close"].iloc[-1]
-        datos["dxy"] = dxy["Close"].iloc[-1]
-        datos["gold"] = gold["Close"].iloc[-1]
-        datos["oil"] = oil["Close"].iloc[-1]
+        if not spy.empty:
+            datos["spy"] = float(spy["Close"].iloc[-1])
+
+        if not vix.empty:
+            datos["vix"] = float(vix["Close"].iloc[-1])
+
+        if not dxy.empty:
+            datos["dxy"] = float(dxy["Close"].iloc[-1])
+
+        if not gold.empty:
+            datos["gold"] = float(gold["Close"].iloc[-1])
+
+        if not oil.empty:
+            datos["oil"] = float(oil["Close"].iloc[-1])
 
     except Exception as e:
 
         print("Error macro:", e)
 
-    score = calcular_risk_score()
+    # SCORE DE RIESGO
+    score = calcular_risk_score(datos)
 
+    # NOTICIAS
     noticias = resumen_noticias()
 
+    # CORRELACIONES
     correlaciones = analizar_correlaciones(datos)
 
+    # CONCLUSION
     conclusion = generar_conclusion(datos, score, noticias)
 
     reporte = f"""
