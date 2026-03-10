@@ -9,12 +9,15 @@ def analizar_correlaciones():
         gold = yf.download("GC=F", period="3mo")
         vix = yf.download("^VIX", period="3mo")
 
-        spy_ret = spy["Close"].pct_change()
-        gold_ret = gold["Close"].pct_change()
-        vix_ret = vix["Close"].pct_change()
+        if spy.empty or gold.empty or vix.empty:
+            return "No hay suficientes datos para correlaciones"
 
-        corr_gold = spy_ret.corr(gold_ret)
-        corr_vix = spy_ret.corr(vix_ret)
+        spy_ret = spy["Close"].pct_change().dropna()
+        gold_ret = gold["Close"].pct_change().dropna()
+        vix_ret = vix["Close"].pct_change().dropna()
+
+        corr_gold = float(spy_ret.corr(gold_ret))
+        corr_vix = float(spy_ret.corr(vix_ret))
 
         texto = ""
 
