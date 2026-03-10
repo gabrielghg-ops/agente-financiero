@@ -1,33 +1,51 @@
 import requests
-import os
 
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+NEWS_API = "https://newsapi.org/v2/everything"
 
-def enviar_telegram(mensaje):
 
-    if TELEGRAM_TOKEN is None or TELEGRAM_CHAT_ID is None:
-        print("Telegram no configurado")
+def resumen_noticias():
+
+    print("Analizando noticias macro...")
+
+    try:
+
+        temas = [
+            "global economy",
+            "inflation",
+            "interest rates",
+            "Argentina economy",
+            "emerging markets",
+            "oil market",
+            "china economy",
+            "US economy"
+        ]
+
+        noticias_resumen = ""
+
+        for tema in temas:
+
+            url = f"https://newsapi.org/v2/everything?q={tema}&language=en&sortBy=publishedAt&pageSize=3"
+
+            r = requests.get(url)
+
+            data = r.json()
+
+            if "articles" not in data:
+                continue
+
+            for art in data["articles"]:
+
+                titulo = art["title"]
+
+                noticias_resumen += f"- {titulo}\n"
+
+        if noticias_resumen == "":
+            return "Sin noticias relevantes."
+
+        return noticias_resumen
+
+    except Exception as e:
+
+        print("Error leyendo noticias:", e)
+
         return
-
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-
-    limite = 4000
-
-    partes = [mensaje[i:i+limite] for i in range(0, len(mensaje), limite)]
-
-    for parte in partes:
-
-        data = {
-            "chat_id": TELEGRAM_CHAT_ID,
-            "text": parte
-        }
-
-        try:
-            r = requests.post(url, json=data)
-
-            if r.status_code != 200:
-                print("Error enviando telegram:", r.text)
-
-        except Exception as e:
-            print("Error telegram:", e)
