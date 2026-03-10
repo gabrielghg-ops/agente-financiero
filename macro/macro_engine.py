@@ -6,6 +6,20 @@ from macro.macro_conclusion import generar_conclusion
 from macro.macro_correlation import analizar_correlaciones
 
 
+def ultimo_valor(df):
+
+    try:
+        val = df["Close"].iloc[-1]
+
+        if hasattr(val, "item"):
+            val = val.item()
+
+        return float(val)
+
+    except:
+        return 0
+
+
 def analizar_macro_global():
 
     print("Analizando entorno macroeconómico...")
@@ -20,35 +34,22 @@ def analizar_macro_global():
         gold = yf.download("GC=F", period="6mo", progress=False)
         oil = yf.download("CL=F", period="6mo", progress=False)
 
-        if not spy.empty:
-            datos["spy"] = float(spy["Close"].iloc[-1])
-
-        if not vix.empty:
-            datos["vix"] = float(vix["Close"].iloc[-1])
-
-        if not dxy.empty:
-            datos["dxy"] = float(dxy["Close"].iloc[-1])
-
-        if not gold.empty:
-            datos["gold"] = float(gold["Close"].iloc[-1])
-
-        if not oil.empty:
-            datos["oil"] = float(oil["Close"].iloc[-1])
+        datos["spy"] = ultimo_valor(spy)
+        datos["vix"] = ultimo_valor(vix)
+        datos["dxy"] = ultimo_valor(dxy)
+        datos["gold"] = ultimo_valor(gold)
+        datos["oil"] = ultimo_valor(oil)
 
     except Exception as e:
 
         print("Error macro:", e)
 
-    # SCORE DE RIESGO
     score = calcular_risk_score(datos)
 
-    # NOTICIAS
     noticias = resumen_noticias()
 
-    # CORRELACIONES
     correlaciones = analizar_correlaciones(datos)
 
-    # CONCLUSION
     conclusion = generar_conclusion(datos, score, noticias)
 
     reporte = f"""

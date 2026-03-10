@@ -1,51 +1,35 @@
 import requests
 
-NEWS_API = "https://newsapi.org/v2/everything"
-
 
 def resumen_noticias():
 
     print("Analizando noticias macro...")
 
+    texto = ""
+
     try:
 
-        temas = [
-            "global economy",
-            "inflation",
-            "interest rates",
-            "Argentina economy",
-            "emerging markets",
-            "oil market",
-            "china economy",
-            "US economy"
-        ]
+        url = "https://newsapi.org/v2/everything?q=economy OR inflation OR fed OR argentina&language=en&pageSize=5&sortBy=publishedAt&apiKey=demo"
 
-        noticias_resumen = ""
+        r = requests.get(url)
 
-        for tema in temas:
+        data = r.json()
 
-            url = f"https://newsapi.org/v2/everything?q={tema}&language=en&sortBy=publishedAt&pageSize=3"
+        if "articles" in data:
 
-            r = requests.get(url)
+            for n in data["articles"][:3]:
 
-            data = r.json()
+                titulo = n.get("title","")
 
-            if "articles" not in data:
-                continue
-
-            for art in data["articles"]:
-
-                titulo = art["title"]
-
-                noticias_resumen += f"- {titulo}\n"
-
-        if noticias_resumen == "":
-            return "Sin noticias relevantes."
-
-        return noticias_resumen
+                texto += f"- {titulo}\n"
 
     except Exception as e:
 
-        print("Error leyendo noticias:", e)
+        print("Error noticias:", e)
 
-        return
+        texto = "No se pudieron obtener noticias"
+
+    if texto == "":
+        texto = "Sin noticias relevantes"
+
+    return texto
