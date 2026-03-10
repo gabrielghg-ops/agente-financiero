@@ -1,4 +1,5 @@
 import yfinance as yf
+import pandas as pd
 
 
 def analizar_correlaciones():
@@ -9,15 +10,25 @@ def analizar_correlaciones():
         gold = yf.download("GC=F", period="3mo")
         vix = yf.download("^VIX", period="3mo")
 
+        # Verificar datos
         if spy.empty or gold.empty or vix.empty:
-            return "No hay suficientes datos para correlaciones"
+            return "Datos insuficientes para calcular correlaciones"
 
-        spy_ret = spy["Close"].pct_change().dropna()
-        gold_ret = gold["Close"].pct_change().dropna()
-        vix_ret = vix["Close"].pct_change().dropna()
+        # Retornos
+        spy_ret = spy["Close"].pct_change()
+        gold_ret = gold["Close"].pct_change()
+        vix_ret = vix["Close"].pct_change()
 
-        corr_gold = float(spy_ret.corr(gold_ret))
-        corr_vix = float(spy_ret.corr(vix_ret))
+        # Unir series para evitar desalineaciones
+        df = pd.concat([spy_ret, gold_ret, vix_ret], axis=1)
+        df.columns = ["spy", "gold", "vix"]
+        df = df.dropna()
+
+        if df.empty:
+            return "Datos insuficientes para correlaciones"
+
+        corr_gold = float(df["spy"].corr(df["gold"]))
+        corr_vix = float(df["spy"].corr(df["vix"]))
 
         texto = ""
 
