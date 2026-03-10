@@ -1,26 +1,43 @@
-from macro.macro_news import resumen_noticias
-from macro.macro_risk_score import calcular_risk_score
-from macro.macro_conclusion import generar_conclusion
+import yfinance as yf
 
 
-def analizar_macro_global():
+def calcular_risk_score():
 
-    print("Analizando entorno macroeconómico...")
+    try:
 
-    report = ""
+        print("Calculando risk score global...")
 
-    score = calcular_risk_score()
+        spy = yf.download("SPY", period="3mo", progress=False)
+        vix = yf.download("^VIX", period="3mo", progress=False)
 
-    report += f"Risk Score Global: {score}/100\n\n"
+        if spy.empty or vix.empty:
+            return 50
 
-    noticias = resumen_noticias()
+        spy_price = spy["Close"].iloc[-1]
+        spy_avg = spy["Close"].mean()
 
-    report += "Noticias Macro:\n"
-    report += noticias
-    report += "\n\n"
+        vix_level = vix["Close"].iloc[-1]
 
-    conclusion = generar_conclusion(score)
+        score = 50
 
-    report += conclusion
+        # tendencia mercado
+        if spy_price > spy_avg:
+            score += 20
+        else:
+            score -= 20
 
-    return report
+        # volatilidad
+        if vix_level < 20:
+            score += 20
+        else:
+            score -= 20
+
+        score = max(0, min(100, score))
+
+        return score
+
+    except Exception as e:
+
+        print("Error calculando risk score:", e)
+
+        return 50
