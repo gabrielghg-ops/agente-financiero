@@ -1,4 +1,5 @@
 import requests
+import xml.etree.ElementTree as ET
 
 
 def analizar_noticias():
@@ -7,23 +8,19 @@ def analizar_noticias():
 
     try:
 
-        url = "https://newsapi.org/v2/top-headlines?category=business&pageSize=5&apiKey=demo"
+        url = "https://news.google.com/rss/search?q=stock+market+economy+war+inflation&hl=en-US&gl=US&ceid=US:en"
 
         r = requests.get(url, timeout=10)
 
-        data = r.json()
+        root = ET.fromstring(r.content)
 
         noticias = ""
 
-        if "articles" not in data:
-            return "No se pudieron obtener noticias\n"
+        for item in root.findall(".//item")[:5]:
 
-        for art in data["articles"][:5]:
+            titulo = item.find("title").text
 
-            titulo = art.get("title", "")
-
-            if titulo:
-                noticias += "- " + titulo + "\n"
+            noticias += "- " + titulo + "\n"
 
         if noticias == "":
             noticias = "No hay noticias relevantes\n"
@@ -34,6 +31,6 @@ def analizar_noticias():
 
     except Exception as e:
 
-        print("Error obteniendo noticias:", e)
+        print("Error noticias:", e)
 
-        return "Error obteniendo noticias\n"
+        return "No se pudieron obtener noticias\n"
