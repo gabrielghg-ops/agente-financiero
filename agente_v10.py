@@ -27,7 +27,6 @@ def enviar_telegram(msg):
         })
 
     except Exception as e:
-
         print("Error telegram:", e)
 
 
@@ -37,11 +36,22 @@ def run_agent():
 
     report = "📊 AGENTE FINANCIERO V10\n\n"
 
+    # -------------------
+    # MACRO
+    # -------------------
+
     print("Analizando entorno macroeconómico...")
 
     macro = analizar_macro_global()
 
-    report += macro + "\n\n"
+    if macro:
+        report += str(macro) + "\n\n"
+    else:
+        report += "Error obteniendo datos macro\n\n"
+
+    # -------------------
+    # CARTERA
+    # -------------------
 
     cartera = obtener_cartera()
 
@@ -72,33 +82,80 @@ Señal: {r['signal']}
 
             print("Error activo:", ticker, e)
 
+    # -------------------
+    # IA CARTERA
+    # -------------------
+
     print("IA analizando cartera...")
 
-    analisis_cartera = analizar_cartera_ia(resultados)
+    try:
 
-    report += "\n🧠 IA CARTERA\n"
-    report += analisis_cartera
+        analisis_cartera = analizar_cartera_ia(resultados)
+
+        report += "\n🧠 IA CARTERA\n"
+        report += str(analisis_cartera)
+
+    except Exception as e:
+
+        print("Error IA cartera:", e)
+
+    # -------------------
+    # NOTICIAS
+    # -------------------
 
     print("Analizando noticias...")
 
-    noticias = analizar_noticias()
+    try:
+
+        noticias_texto, riesgo = analizar_noticias()
+
+    except Exception as e:
+
+        print("Error noticias:", e)
+
+        noticias_texto = "No se pudieron obtener noticias"
+        riesgo = 0
 
     report += "\n📰 NOTICIAS\n"
-    report += noticias
+    report += str(noticias_texto)
+
+    # -------------------
+    # IA ESTRATEGIA
+    # -------------------
 
     print("Generando estrategia IA...")
 
-    estrategia = generar_estrategia_ia(macro, resultados, noticias)
+    try:
 
-    report += "\n📊 ESTRATEGIA IA\n"
-    report += estrategia
+        estrategia = generar_estrategia_ia(macro, resultados, noticias_texto)
 
-    alertas = revisar_alertas()
+        report += "\n\n📊 ESTRATEGIA IA\n"
+        report += str(estrategia)
 
-    if alertas:
+    except Exception as e:
 
-        report += "\n🚨 ALERTAS\n"
-        report += alertas
+        print("Error estrategia IA:", e)
+
+    # -------------------
+    # ALERTAS
+    # -------------------
+
+    try:
+
+        alertas = revisar_alertas()
+
+        if alertas:
+
+            report += "\n\n🚨 ALERTAS\n"
+            report += str(alertas)
+
+    except Exception as e:
+
+        print("Error alertas:", e)
+
+    # -------------------
+    # TELEGRAM
+    # -------------------
 
     enviar_telegram(report)
 

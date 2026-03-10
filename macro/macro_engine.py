@@ -29,15 +29,15 @@ def analizar_macro_global():
         gold = yf.download("GC=F", period="6mo")
         oil = yf.download("CL=F", period="6mo")
 
-        # EXTRAER VALORES NUMÉRICOS
-        spy_val = float(spy["Close"].iloc[-1])
-        vix_val = float(vix["Close"].iloc[-1])
-        dxy_val = float(dxy["Close"].iloc[-1])
-        gold_val = float(gold["Close"].iloc[-1])
-        oil_val = float(oil["Close"].iloc[-1])
+        # Convertir correctamente a float
+        spy_val = float(spy["Close"].iloc[-1].item())
+        vix_val = float(vix["Close"].iloc[-1].item())
+        dxy_val = float(dxy["Close"].iloc[-1].item())
+        gold_val = float(gold["Close"].iloc[-1].item())
+        oil_val = float(oil["Close"].iloc[-1].item())
 
-        spy_mean = float(spy["Close"].mean())
-        vix_mean = float(vix["Close"].mean())
+        spy_mean = float(spy["Close"].mean().item())
+        vix_mean = float(vix["Close"].mean().item())
 
     except Exception as e:
 
@@ -45,10 +45,6 @@ def analizar_macro_global():
 
         return "Error obteniendo datos macro"
 
-
-    # -------------------
-    # CALCULO RISK SCORE
-    # -------------------
 
     score = 50
 
@@ -74,38 +70,16 @@ def analizar_macro_global():
         score -= 5
 
 
-    # -------------------
     # NOTICIAS
-    # -------------------
-
     noticias_texto, riesgo_noticias = analizar_noticias()
 
     score = score - riesgo_noticias
 
-    if score < 0:
-        score = 0
-
-    if score > 100:
-        score = 100
-
-
-    # -------------------
-    # MODO DE MERCADO
-    # -------------------
+    score = max(0, min(100, score))
 
     risk_mode = determinar_risk_mode(score)
 
-
-    # -------------------
-    # CORRELACIONES
-    # -------------------
-
     correlaciones = analizar_correlaciones()
-
-
-    # -------------------
-    # CONCLUSION IA
-    # -------------------
 
     conclusion = generar_conclusion(
         {
@@ -119,11 +93,6 @@ def analizar_macro_global():
         noticias_texto,
         risk_mode
     )
-
-
-    # -------------------
-    # TEXTO FINAL
-    # -------------------
 
     report = f"""
 🌍 MACRO GLOBAL
