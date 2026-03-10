@@ -7,14 +7,24 @@ from oportunidades import analizar_activo
 from noticias import analizar_noticias
 
 from macro.macro_engine import analizar_macro_global
+from macro.macro_risk_model import calcular_risk_score
+
 from ai.ai_portfolio import analizar_cartera_ia
 from ai.ai_strategy import generar_estrategia_ia
+from ai.ai_market_regime import detectar_regimen
+
+from radar.global_radar import radar_global
+
 from alerts.market_alerts import revisar_alertas
 
 
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 
+
+# -------------------
+# TELEGRAM
+# -------------------
 
 def enviar_telegram(msg):
 
@@ -30,11 +40,15 @@ def enviar_telegram(msg):
         print("Error telegram:", e)
 
 
+# -------------------
+# AGENTE PRINCIPAL
+# -------------------
+
 def run_agent():
 
-    print("===== AGENTE FINANCIERO V10 =====")
+    print("===== AGENTE FINANCIERO V11 =====")
 
-    report = "📊 AGENTE FINANCIERO V10\n\n"
+    report = "📊 AGENTE FINANCIERO V11\n\n"
 
     # -------------------
     # MACRO
@@ -42,12 +56,80 @@ def run_agent():
 
     print("Analizando entorno macroeconómico...")
 
-    macro = analizar_macro_global()
+    try:
 
-    if macro:
-        report += str(macro) + "\n\n"
-    else:
-        report += "Error obteniendo datos macro\n\n"
+        macro = analizar_macro_global()
+
+        if macro:
+            report += str(macro) + "\n\n"
+        else:
+            report += "Error obteniendo datos macro\n\n"
+
+    except Exception as e:
+
+        print("Error macro:", e)
+
+        macro = "Error macro"
+        report += "Error analizando macro\n\n"
+
+    # -------------------
+    # NOTICIAS
+    # -------------------
+
+    print("Analizando noticias...")
+
+    try:
+
+        noticias_texto, riesgo_noticias = analizar_noticias()
+
+    except Exception as e:
+
+        print("Error noticias:", e)
+
+        noticias_texto = "No se pudieron obtener noticias"
+        riesgo_noticias = 0
+
+    report += "📰 CONTEXTO GLOBAL\n"
+    report += str(noticias_texto) + "\n\n"
+
+    # -------------------
+    # RISK MODEL
+    # -------------------
+
+    print("Calculando riesgo global...")
+
+    try:
+
+        risk_score = calcular_risk_score(riesgo_noticias)
+
+        regimen = detectar_regimen(risk_score)
+
+        report += "🌍 RIESGO GLOBAL\n\n"
+        report += f"Risk Score: {risk_score}/100\n"
+        report += f"Modo de mercado: {regimen}\n\n"
+
+    except Exception as e:
+
+        print("Error risk model:", e)
+
+        report += "No se pudo calcular riesgo global\n\n"
+
+    # -------------------
+    # RADAR GLOBAL
+    # -------------------
+
+    print("Analizando radar global...")
+
+    try:
+
+        radar = radar_global()
+
+        report += "🌎 RADAR GLOBAL\n\n"
+        report += radar + "\n"
+
+    except Exception as e:
+
+        print("Error radar:", e)
 
     # -------------------
     # CARTERA
@@ -55,7 +137,7 @@ def run_agent():
 
     cartera = obtener_cartera()
 
-    report += "📈 CARTERA\n\n"
+    report += "\n📈 CARTERA\n\n"
 
     resultados = []
 
@@ -100,26 +182,6 @@ Señal: {r['signal']}
         print("Error IA cartera:", e)
 
     # -------------------
-    # NOTICIAS
-    # -------------------
-
-    print("Analizando noticias...")
-
-    try:
-
-        noticias_texto, riesgo = analizar_noticias()
-
-    except Exception as e:
-
-        print("Error noticias:", e)
-
-        noticias_texto = "No se pudieron obtener noticias"
-        riesgo = 0
-
-    report += "\n📰 NOTICIAS\n"
-    report += str(noticias_texto)
-
-    # -------------------
     # IA ESTRATEGIA
     # -------------------
 
@@ -161,6 +223,10 @@ Señal: {r['signal']}
 
     print("Reporte enviado")
 
+
+# -------------------
+# LOOP
+# -------------------
 
 if __name__ == "__main__":
 
