@@ -1,50 +1,22 @@
-def interpretar_macro(datos):
+def analizar_correlaciones(datos):
 
-    vix = datos.get("vix", 0)
-    dxy = datos.get("dxy", 0)
-    us10y = datos.get("us10y", 0)
+    texto = ""
 
-    # Sentimiento de mercado segun volatilidad
+    try:
 
-    if vix < 15:
-        riesgo = "bajo"
-    elif vix < 25:
-        riesgo = "moderado"
-    else:
-        riesgo = "alto"
+        if datos["vix"] > 25:
+            texto += "Alta volatilidad en mercado\n"
 
-    # Fuerza del dolar
+        if datos["dxy"] > 105:
+            texto += "Dolar fuerte presiona emergentes\n"
 
-    if dxy > 104:
-        dolar = "fuerte"
-    elif dxy < 100:
-        dolar = "debil"
-    else:
-        dolar = "neutral"
+        if datos["gold"] > 2300:
+            texto += "Flujo hacia activos refugio\n"
 
-    # Condiciones de liquidez segun tasas
+        if datos["oil"] > 90:
+            texto += "Riesgo inflacionario por energia\n"
 
-    if us10y > 4.5:
-        liquidez = "restrictiva"
-    elif us10y < 3.5:
-        liquidez = "expansiva"
-    else:
-        liquidez = "normal"
+    except:
+        texto = "Sin datos suficientes"
 
-    # Sesgo general de mercado
-
-    if riesgo == "bajo" and dolar != "fuerte":
-        sentimiento = "RISK ON"
-
-    elif riesgo == "alto":
-        sentimiento = "RISK OFF"
-
-    else:
-        sentimiento = "NEUTRAL"
-
-    return {
-        "riesgo": riesgo,
-        "dolar": dolar,
-        "liquidez": liquidez,
-        "sentimiento": sentimiento
-    }
+    return texto
