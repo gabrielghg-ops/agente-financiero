@@ -1,80 +1,176 @@
 import yfinance as yf
 
-from macro.macro_risk_score import calcular_risk_score
-from macro.macro_news import resumen_noticias
-from macro.macro_conclusion import generar_conclusion
-from macro.macro_correlation import analizar_correlaciones
+from macro.macro_news import analizar_noticias
 
 
-def ultimo_valor(df):
+def determinar_risk_mode(score):
 
-    try:
-        val = df["Close"].iloc[-1]
+    if score >= 70:
+        return "RISK ON"
 
-        if hasattr(val, "item"):
-            val = val.item()
+    elif score >= 40:
+        return "NEUTRAL"
 
-        return float(val)
-
-    except:
-        return 0
+    else:
+        return "RISK OFF"
 
 
 def analizar_macro_global():
 
     print("Analizando entorno macroeconómico...")
 
-    datos = {}
-
     try:
 
-        spy = yf.download("SPY", period="6mo", progress=False)
-        vix = yf.download("^VIX", period="6mo", progress=False)
-        dxy = yf.download("DX-Y.NYB", period="6mo", progress=False)
-        gold = yf.download("GC=F", period="6mo", progress=False)
-        oil = yf.download("CL=F", period="6mo", progress=False)
+        spy = yf.download("SPY", period="5d")
+        vix = yf.download("^VIX", period="5d")
+        dxy = yf.download("DX-Y.NYB", period="5d")
+        gold = yf.download("GC=F", period="5d")
+        oil = yf.download("CL=F", period="5d")
 
-        datos["spy"] = ultimo_valor(spy)
-        datos["vix"] = ultimo_valor(vix)
-        datos["dxy"] = ultimo_valor(dxy)
-        datos["gold"] = ultimo_valor(gold)
-        datos["oil"] = ultimo_valor(oil)
+        spy_val = float(spy["Close"].iloc[-1].item())
+        vix_val = float(vix["Close"].iloc[-1].item())
+        dxy_val = float(dxy["Close"].iloc[-1].item())
+        gold_val = float(gold["Close"].iloc[-1].item())
+        oil_val = float(oil["Close"].iloc[-1].item())
 
     except Exception as e:
 
-        print("Error macro:", e)
+        print("Error obteniendo datos macro:", e)
 
-    # 🔧 AQUI ESTA EL FIX
-    score, risk_mode = calcular_risk_score(datos)
+        return "Error obteniendo datos macro\n"
+
+    # -------------------------
+    # SCORE BASE DE MERCADO
+    # -------------------------
+
+    score = 50
+
+    # SPY fuerte
+    if spy_val > spy["Close"].mean():
+        score += 10
+    else:
+        score -= 10
+
+    # volatilidad
+    if vix_val < 20:
+        score += 10
+    elif vix_val > 30:
+        score -= 15
+
+    # dolar fuerte
+    if dxy_val > dxy["Close"].mean():
+        score -= 5
+
+    # oro refugio
+    if gold_val > gold["Close"].mean():
+        score -= 5
+
+    # petróleo alto = inflación
+    if oil_val > oil["Close"].mean():
+        score -= 5
+
+    # -------------------------
+    # ANALISIS DE NOTICIAS
+    # -------------------------
 
     print("Analizando noticias macro...")
 
-    noticias = resumen_noticias()
+    noticias, riesgo_noticias = analizar_noticias()
 
-    correlaciones = analizar_correlaciones(datos)
+    # -------------------------
+    # SCORE FINAL
+    # -------------------------
 
-    conclusion = generar_conclusion(datos, score, noticias, risk_mode)
+    score_total = score - riesgo_noticias
 
-    reporte = f"""
+    if score_total < 0:
+        score_total = 0
+
+    if score_total > 100:
+        score_total = 100
+
+    risk_mode = determinar_risk_mode(score_total)
+
+    # -------------------------
+    # CORRELACION SIMPLE
+    # -------------------------
+
+    correlacion = ""
+
+    if gold_val > gold["Close"].mean() and vix_val > 25:
+        correlacion = "Flujo hacia activos refugio"
+
+    elif spy_val > spy["Close"].mean() and vix_val < 20:
+        correlacion = "Flujo hacia activos de riesgo"
+
+    else:
+        correlacion = "Mercado mixto"
+
+    # -------------------------
+    # CONCLUSION
+    # -------------------------
+
+    conclusion = ""
+
+    if risk_mode == "RISK ON":
+
+        conclusion = (
+            "El entorno macro muestra condiciones favorables para activos de riesgo.\n\n"
+            "Recomendación:\n"
+            "- Mayor exposición a acciones\n"
+            "- Favorecer índices\n"
+            "- Crypto favorecida\n"
+            "- Menor necesidad de refugio en oro\n"
+        )
+
+    elif risk_mode == "NEUTRAL":
+
+        conclusion = (
+            "El mercado se encuentra en fase de incertidumbre.\n\n"
+            "Recomendación:\n"
+            "- Mantener posiciones equilibradas\n"
+            "- Reducir apalancamiento\n"
+            "- Vigilar noticias macro\n"
+        )
+
+    else:
+
+        conclusion = (
+            "El mercado muestra señales de aversión al riesgo.\n\n"
+            "Recomendación:\n"
+            "- Reducir exposición a acciones\n"
+            "- Aumentar activos defensivos\n"
+            "- Considerar oro o cash\n"
+        )
+
+    # -------------------------
+    # TEXTO FINAL
+    # -------------------------
+
+    texto = f"""
 🌍 MACRO GLOBAL
 
-SPY: {round(datos.get("spy",0),2)}
-VIX: {round(datos.get("vix",0),2)}
-DXY: {round(datos.get("dxy",0),2)}
-ORO: {round(datos.get("gold",0),2)}
-PETROLEO: {round(datos.get("oil",0),2)}
+SPY: {round(spy_val,2)}
+VIX: {round(vix_val,2)}
+DXY: {round(dxy_val,2)}
+ORO: {round(gold_val,2)}
+PETROLEO: {round(oil_val,2)}
 
-Risk Score: {score}/100
+Risk Score Mercado: {score}
+Impacto Noticias: -{riesgo_noticias}
+
+Global Risk Score: {score_total}/100
 Modo de mercado: {risk_mode}
 
 🔗 Correlaciones:
-{correlaciones}
+{correlacion}
 
 📰 Contexto global:
 {noticias}
 
 📊 Conclusión estratégica:
+
 {conclusion}
 """
 
-    return reporte
+    return texto
