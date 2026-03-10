@@ -20,18 +20,6 @@ def ultimo_valor(df):
         return 0
 
 
-def determinar_risk_mode(score):
-
-    if score >= 70:
-        return "RISK_ON"
-
-    elif score >= 40:
-        return "NEUTRAL"
-
-    else:
-        return "RISK_OFF"
-
-
 def analizar_macro_global():
 
     print("Analizando entorno macroeconómico...")
@@ -56,9 +44,8 @@ def analizar_macro_global():
 
         print("Error macro:", e)
 
-    score = calcular_risk_score(datos)
-
-    risk_mode = determinar_risk_mode(score)
+    # 🔧 AQUI ESTA EL FIX
+    score, risk_mode = calcular_risk_score(datos)
 
     print("Analizando noticias macro...")
 
