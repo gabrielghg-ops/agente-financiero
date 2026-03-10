@@ -20,6 +20,18 @@ def ultimo_valor(df):
         return 0
 
 
+def determinar_risk_mode(score):
+
+    if score >= 70:
+        return "RISK_ON"
+
+    elif score >= 40:
+        return "NEUTRAL"
+
+    else:
+        return "RISK_OFF"
+
+
 def analizar_macro_global():
 
     print("Analizando entorno macroeconómico...")
@@ -46,11 +58,15 @@ def analizar_macro_global():
 
     score = calcular_risk_score(datos)
 
+    risk_mode = determinar_risk_mode(score)
+
+    print("Analizando noticias macro...")
+
     noticias = resumen_noticias()
 
     correlaciones = analizar_correlaciones(datos)
 
-    conclusion = generar_conclusion(datos, score, noticias)
+    conclusion = generar_conclusion(datos, score, noticias, risk_mode)
 
     reporte = f"""
 🌍 MACRO GLOBAL
@@ -62,6 +78,7 @@ ORO: {round(datos.get("gold",0),2)}
 PETROLEO: {round(datos.get("oil",0),2)}
 
 Risk Score: {score}/100
+Modo de mercado: {risk_mode}
 
 🔗 Correlaciones:
 {correlaciones}
@@ -69,7 +86,7 @@ Risk Score: {score}/100
 📰 Contexto global:
 {noticias}
 
-📊 Conclusión:
+📊 Conclusión estratégica:
 {conclusion}
 """
 
