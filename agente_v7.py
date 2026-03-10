@@ -9,6 +9,7 @@ from noticias import analizar_noticias
 from macro.macro_engine import analizar_macro_global
 from ai.ai_market_brain import generar_estrategia
 from ai.ai_portfolio_advisor import analizar_cartera
+from estrategia import generar_estrategia
 
 
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
