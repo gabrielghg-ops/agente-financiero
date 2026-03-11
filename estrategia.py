@@ -20,7 +20,7 @@ def generar_estrategia_ia(macro, cartera, noticias):
         if a["signal"] == "alcista":
             alcistas += 1
 
-        if a["signal"] == "bajista":
+        if a["signal"] == "bajista": 
             bajistas += 1
 
     if bajistas > alcistas:
