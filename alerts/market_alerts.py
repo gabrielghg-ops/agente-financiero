@@ -20,7 +20,7 @@ def revisar_alertas():
 
     activos = [
         "SPY",
-        "VIX",
+        "^VIX",
         "GLD",
         "SLV",
         "EEM"
