@@ -91,7 +91,7 @@ def analizar_macro_global():
         },
         score,
         noticias_texto,
-        risk_mode
+        risk_mode 
     )
 
     report = f"""
