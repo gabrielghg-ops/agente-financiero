@@ -1,42 +1,63 @@
 import yfinance as yf
+import pandas as pd
+
+
+def _get_close_series(data):
+    if data is None or data.empty:
+        return pd.Series(dtype="float64")
+
+    close = data["Close"]
+
+    if isinstance(close, pd.DataFrame):
+        close = close.iloc[:, 0]
+
+    return pd.to_numeric(close, errors="coerce").dropna()
 
 
 def revisar_alertas():
 
-    alertas = ""
+    alertas = []
 
-    try:
+    activos = [
+        "SPY",
+        "VIX",
+        "GLD",
+        "SLV",
+        "EEM"
+    ]
 
-        spy = yf.download("SPY", period="2d")
-        vix = yf.download("^VIX", period="2d")
-        btc = yf.download("BTC-USD", period="2d")
+    for ticker in activos:
 
-        # SPY
-        spy_hoy = float(spy["Close"].iloc[-1].item())
-        spy_ayer = float(spy["Close"].iloc[-2].item())
+        try:
 
-        spy_cambio = (spy_hoy - spy_ayer) / spy_ayer * 100
+            data = yf.download(
+                ticker,
+                period="6mo",
+                interval="1d",
+                progress=False
+            )
 
-        if spy_cambio < -3:
-            alertas += "⚠ SPY cayó más de 3% hoy\n"
+            close = _get_close_series(data)
 
-        # VIX
-        vix_actual = float(vix["Close"].iloc[-1].item())
+            if len(close) < 20:
+                continue
 
-        if vix_actual > 30:
-            alertas += "⚠ VIX indica volatilidad extrema\n"
+            precio = float(close.iloc[-1])
+            ma20 = close.rolling(20).mean().iloc[-1]
 
-        # BTC
-        btc_hoy = float(btc["Close"].iloc[-1].item())
-        btc_ayer = float(btc["Close"].iloc[-2].item())
+            if pd.notna(ma20):
 
-        btc_cambio = (btc_hoy - btc_ayer) / btc_ayer * 100
+                if precio > ma20 * 1.05:
+                    alertas.append(f"{ticker} fuerte momentum alcista")
 
-        if btc_cambio < -8:
-            alertas += "⚠ BTC caída fuerte (>8%)\n"
+                elif precio < ma20 * 0.95:
+                    alertas.append(f"{ticker} debilidad significativa")
 
-    except Exception as e:
+        except Exception as e:
 
-        print("Error en alertas:", e)
+            print(f"Error alertas {ticker}: {e}")
 
-    return alertas
+    if len(alertas) == 0:
+        return None
+
+    return "\n".join(alertas)
