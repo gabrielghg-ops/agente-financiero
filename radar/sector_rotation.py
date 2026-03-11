@@ -1,4 +1,5 @@
 import yfinance as yf
+import pandas as pd
 
 SECTORS = {
     "Tecnologia": "XLK",
@@ -10,18 +11,34 @@ SECTORS = {
     "Defensivo": "XLP"
 }
 
-def sector_rotation():
 
+def _get_close_series(data):
+    if data is None or data.empty:
+        return pd.Series(dtype="float64")
+
+    close = data["Close"]
+
+    if isinstance(close, pd.DataFrame):
+        close = close.iloc[:, 0]
+
+    return pd.to_numeric(close, errors="coerce").dropna()
+
+
+def sector_rotation():
     results = {}
 
     for sector, ticker in SECTORS.items():
+        try:
+            data = yf.download(ticker, period="3mo", interval="1d", progress=False)
+            close = _get_close_series(data)
 
-        data = yf.download(ticker, period="3mo")
+            if len(close) < 2:
+                continue
 
-        perf = (data["Close"].iloc[-1] / data["Close"].iloc[0]) - 1
+            perf = (float(close.iloc[-1]) / float(close.iloc[0])) - 1
+            results[sector] = round(perf * 100, 2)
 
-        results[sector] = round(perf * 100, 2)
+        except Exception as e:
+            print(f"Error sector {sector}: {e}")
 
-    sorted_sectors = sorted(results.items(), key=lambda x: x[1], reverse=True)
-
-    return sorted_sectors
+    return sorted(results.items(), key=lambda x: x[1], reverse=True)
