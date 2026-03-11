@@ -33,4 +33,4 @@ def generar_estrategia_ia(macro, cartera, noticias):
         texto += "Mercado con momentum positivo\n"
         texto += "Se pueden buscar oportunidades\n"
 
-    return texto
+    return texto 
