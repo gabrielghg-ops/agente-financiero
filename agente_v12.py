@@ -17,6 +17,13 @@ from radar.global_radar import radar_global
 
 from alerts.market_alerts import revisar_alertas
 
+# NUEVOS MODULOS V12
+from macro.crash_detector import detect_crash_risk
+from macro.macro_forecast import macro_forecast
+from radar.sector_rotation import sector_rotation
+from scanner.global_scanner import scan_assets
+from scanner.opportunity_ranker import rank_opportunities
+
 
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
@@ -45,15 +52,16 @@ def enviar_telegram(msg):
 
             print("Error telegram:", e)
 
+
 # -------------------
 # AGENTE PRINCIPAL
 # -------------------
 
 def run_agent():
 
-    print("===== AGENTE FINANCIERO V11 INSTITUTIONAL =====")
+    print("===== AGENTE FINANCIERO V12 INSTITUTIONAL =====")
 
-    report = "📊 AGENTE FINANCIERO V11\n\n"
+    report = "📊 AGENTE FINANCIERO V12\n\n"
 
     # -------------------
     # MACRO
@@ -77,6 +85,7 @@ def run_agent():
         macro = "Error macro"
         report += "Error analizando macro\n\n"
 
+
     # -------------------
     # NOTICIAS
     # -------------------
@@ -96,6 +105,7 @@ def run_agent():
 
     report += "📰 CONTEXTO GLOBAL\n"
     report += str(noticias_texto) + "\n\n"
+
 
     # -------------------
     # RISK MODEL
@@ -119,6 +129,46 @@ def run_agent():
 
         report += "No se pudo calcular riesgo global\n\n"
 
+
+    # -------------------
+    # CRASH DETECTOR (V12)
+    # -------------------
+
+    print("Analizando riesgo de crash...")
+
+    try:
+
+        crash = detect_crash_risk()
+
+        report += "⚠️ CRASH RISK\n\n"
+        report += f"Score: {crash['crash_score']}\n"
+        report += f"Nivel: {crash['crash_risk']}\n\n"
+
+    except Exception as e:
+
+        print("Error crash detector:", e)
+
+
+    # -------------------
+    # MACRO FORECAST
+    # -------------------
+
+    print("Calculando forecast macro...")
+
+    try:
+
+        forecast = macro_forecast()
+
+        report += "🔮 MACRO FORECAST\n\n"
+        report += f"Risk On: {forecast['risk_on']}%\n"
+        report += f"Neutral: {forecast['neutral']}%\n"
+        report += f"Risk Off: {forecast['risk_off']}%\n\n"
+
+    except Exception as e:
+
+        print("Error forecast:", e)
+
+
     # -------------------
     # RADAR GLOBAL
     # -------------------
@@ -135,6 +185,51 @@ def run_agent():
     except Exception as e:
 
         print("Error radar:", e)
+
+
+    # -------------------
+    # ROTACION SECTORIAL
+    # -------------------
+
+    print("Analizando rotación sectorial...")
+
+    try:
+
+        sectors = sector_rotation()
+
+        report += "\n🏭 ROTACION SECTORIAL\n\n"
+
+        for s in sectors[:5]:
+
+            report += f"{s[0]} : {s[1]}%\n"
+
+    except Exception as e:
+
+        print("Error rotación:", e)
+
+
+    # -------------------
+    # SCANNER GLOBAL
+    # -------------------
+
+    print("Buscando oportunidades globales...")
+
+    try:
+
+        scanner = scan_assets()
+
+        ranking = rank_opportunities(scanner)
+
+        report += "\n🚀 OPORTUNIDADES GLOBALES\n\n"
+
+        for r in ranking:
+
+            report += f"{r['ticker']} | Score {r['score']} | {r['nivel']}\n"
+
+    except Exception as e:
+
+        print("Error scanner:", e)
+
 
     # -------------------
     # CARTERA
@@ -169,6 +264,7 @@ Señal: {r['signal']}
 
             print("Error activo:", ticker, e)
 
+
     # -------------------
     # IA CARTERA
     # -------------------
@@ -185,6 +281,7 @@ Señal: {r['signal']}
     except Exception as e:
 
         print("Error IA cartera:", e)
+
 
     # -------------------
     # IA ESTRATEGIA
@@ -203,6 +300,7 @@ Señal: {r['signal']}
 
         print("Error estrategia IA:", e)
 
+
     # -------------------
     # ALERTAS
     # -------------------
@@ -220,9 +318,6 @@ Señal: {r['signal']}
 
         print("Error alertas:", e)
 
-    # -------------------
-    # TELEGRAM
-    # -------------------
 
     enviar_telegram(report)
 
