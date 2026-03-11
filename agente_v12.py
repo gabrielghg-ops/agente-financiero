@@ -12,6 +12,7 @@ from macro.macro_risk_model import calcular_risk_score
 from ai.ai_portfolio import analizar_cartera_ia
 from ai.ai_strategy import generar_estrategia_ia
 from ai.ai_market_regime import detectar_regimen
+from ai.market_report import generar_informe_final
 
 from radar.global_radar import radar_global
 from radar.sector_rotation import sector_rotation
@@ -30,78 +31,76 @@ CHAT_ID = os.environ["CHAT_ID"]
 
 
 def enviar_telegram(msg):
-
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-
     partes = [msg[i:i+4000] for i in range(0, len(msg), 4000)]
 
     for parte in partes:
-
         try:
-            requests.post(url, data={
-                "chat_id": CHAT_ID,
-                "text": parte
-            })
-
+            requests.post(
+                url,
+                data={
+                    "chat_id": CHAT_ID,
+                    "text": parte
+                },
+                timeout=20
+            )
         except Exception as e:
             print("Error telegram:", e)
 
 
 def run_agent():
-
     print("===== AGENTE FINANCIERO V12 INSTITUTIONAL =====")
 
     report = "AGENTE FINANCIERO V12\n\n"
 
+    # valores por defecto para evitar variables sin definir
+    macro = {}
+    noticias_texto = "No se pudieron obtener noticias"
+    riesgo_noticias = 0
+    risk_score = 50
+    regimen = "NEUTRAL"
+    crash = {"crash_score": 0, "crash_risk": "SIN DATOS"}
+    forecast = {"risk_on": 0, "neutral": 100, "risk_off": 0}
+    radar = "Sin datos disponibles"
+    sectors = []
+    resultados = []
+
     # -------------------
     # MACRO
     # -------------------
-
     print("Analizando entorno macroeconómico...")
 
     try:
-
         macro = analizar_macro_global()
 
         if isinstance(macro, dict):
-
             report += "🌍 MACRO GLOBAL\n\n"
-
-            report += f"SPY: {macro.get('SPY','N/D')}\n"
-            report += f"VIX: {macro.get('VIX','N/D')}\n"
-            report += f"DXY: {macro.get('DXY','N/D')}\n"
-            report += f"ORO: {macro.get('ORO','N/D')}\n"
-            report += f"PETROLEO: {macro.get('PETROLEO','N/D')}\n\n"
+            report += f"SPY: {macro.get('SPY', 'N/D')}\n"
+            report += f"VIX: {macro.get('VIX', 'N/D')}\n"
+            report += f"DXY: {macro.get('DXY', 'N/D')}\n"
+            report += f"ORO: {macro.get('ORO', 'N/D')}\n"
+            report += f"PETROLEO: {macro.get('PETROLEO', 'N/D')}\n\n"
 
             if macro.get("correlaciones"):
-
                 report += "🔗 Correlaciones:\n"
                 report += f"{macro['correlaciones']}\n\n"
-
         else:
             report += "Error obteniendo datos macro\n\n"
 
     except Exception as e:
-
         print("Error macro:", e)
-
         macro = {}
         report += "Error analizando macro\n\n"
 
     # -------------------
     # NOTICIAS
     # -------------------
-
     print("Analizando noticias...")
 
     try:
-
         noticias_texto, riesgo_noticias = analizar_noticias()
-
     except Exception as e:
-
         print("Error noticias:", e)
-
         noticias_texto = "No se pudieron obtener noticias"
         riesgo_noticias = 0
 
@@ -111,13 +110,10 @@ def run_agent():
     # -------------------
     # RISK MODEL
     # -------------------
-
     print("Calculando riesgo global...")
 
     try:
-
         risk_score = calcular_risk_score(riesgo_noticias)
-
         regimen = detectar_regimen(risk_score)
 
         report += "🌍 RIESGO GLOBAL\n\n"
@@ -125,19 +121,15 @@ def run_agent():
         report += f"Modo de mercado: {regimen}\n\n"
 
     except Exception as e:
-
         print("Error risk model:", e)
-
         report += "No se pudo calcular riesgo global\n\n"
 
     # -------------------
     # CRASH DETECTOR
     # -------------------
-
     print("Analizando riesgo de crash...")
 
     try:
-
         crash = detect_crash_risk()
 
         report += "⚠️ CRASH RISK\n\n"
@@ -145,17 +137,14 @@ def run_agent():
         report += f"Nivel: {crash['crash_risk']}\n\n"
 
     except Exception as e:
-
         print("Error crash detector:", e)
 
     # -------------------
     # MACRO FORECAST
     # -------------------
-
     print("Calculando forecast macro...")
 
     try:
-
         forecast = macro_forecast()
 
         report += "🔮 MACRO FORECAST\n\n"
@@ -164,92 +153,76 @@ def run_agent():
         report += f"Risk Off: {forecast['risk_off']}%\n\n"
 
     except Exception as e:
-
         print("Error forecast:", e)
 
     # -------------------
     # RADAR GLOBAL
     # -------------------
-
     print("Analizando radar global...")
 
     try:
-
         radar = radar_global()
 
         report += "🌎 RADAR GLOBAL\n\n"
         report += str(radar) + "\n\n"
 
     except Exception as e:
-
         print("Error radar:", e)
 
     # -------------------
     # ROTACION SECTORIAL
     # -------------------
-
     print("Analizando rotación sectorial...")
 
     try:
-
         sectors = sector_rotation()
 
         report += "🏭 ROTACION SECTORIAL\n\n"
 
         for s in sectors[:5]:
-
             report += f"{s[0]} : {s[1]}%\n"
 
         report += "\n"
 
     except Exception as e:
-
         print("Error rotación:", e)
 
     # -------------------
     # SCANNER GLOBAL
     # -------------------
-
     print("Buscando oportunidades globales...")
 
     try:
-
         scanner = scan_assets()
-
         ranking = rank_opportunities(scanner)
 
         report += "🚀 OPORTUNIDADES GLOBALES\n\n"
 
-        for r in ranking:
-
-            report += f"{r['ticker']} | Score {r['score']} | {r['nivel']}\n"
+        if ranking:
+            for r in ranking:
+                report += f"{r['ticker']} | Score {r['score']} | {r['nivel']}\n"
+        else:
+            report += "Sin oportunidades destacadas por ahora\n"
 
         report += "\n"
 
     except Exception as e:
-
         print("Error scanner:", e)
 
     # -------------------
     # CARTERA
     # -------------------
-
     cartera = obtener_cartera()
 
     report += "📈 CARTERA\n\n"
 
-    resultados = []
-
     for ticker in cartera:
-
         print("Analizando", ticker)
 
         try:
-
             r = analizar_activo(ticker)
 
             if r:
-
                 resultados.append(r)
 
                 report += f"""
@@ -260,71 +233,79 @@ Señal: {r['signal']}
 """
 
         except Exception as e:
-
             print("Error activo:", ticker, e)
 
     # -------------------
     # IA CARTERA
     # -------------------
-
     print("IA analizando cartera...")
 
     try:
-
         analisis_cartera = analizar_cartera_ia(resultados)
 
         report += "\n🧠 IA CARTERA\n"
         report += str(analisis_cartera)
 
     except Exception as e:
-
         print("Error IA cartera:", e)
 
     # -------------------
     # IA ESTRATEGIA
     # -------------------
-
     print("Generando estrategia IA...")
 
     try:
-
         estrategia = generar_estrategia_ia(macro, resultados, noticias_texto)
 
         report += "\n\n📊 ESTRATEGIA IA\n"
-        report += str(estrategia)
+
+        if estrategia and str(estrategia).strip():
+            report += str(estrategia)
+        else:
+            report += "Sin cambios estratégicos destacados por el momento"
 
     except Exception as e:
-
         print("Error estrategia IA:", e)
 
     # -------------------
     # ALERTAS
     # -------------------
-
     try:
-
         alertas = revisar_alertas()
 
         if alertas:
-
             report += "\n\n🚨 ALERTAS\n"
             report += str(alertas)
 
     except Exception as e:
-
         print("Error alertas:", e)
 
-    enviar_telegram(report)
+    # -------------------
+    # INFORME FINAL
+    # -------------------
+    try:
+        informe = generar_informe_final(
+            macro=macro,
+            radar=radar,
+            cartera=resultados,
+            risk_score=risk_score,
+            crash=crash,
+            noticias=noticias_texto
+        )
 
+        if informe and str(informe).strip():
+            report += "\n"
+            report += str(informe)
+
+    except Exception as e:
+        print("Error informe final:", e)
+
+    enviar_telegram(report)
     print("Reporte enviado")
 
 
 if __name__ == "__main__":
-
     while True:
-
         run_agent()
-
         print("Esperando 6 horas...")
-
         time.sleep(21600)
