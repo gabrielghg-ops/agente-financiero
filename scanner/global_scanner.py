@@ -1,43 +1,72 @@
 import yfinance as yf
+import pandas as pd
 
 ASSETS = [
-    "NVDA","MSFT","AAPL","AMD","META",
+    "NVDA","MSFT","AAPL","META","AMD",
     "GLD","SLV","COPX","URA",
     "XLE","XLK","EEM","EWZ","IBIT"
 ]
 
+
+def _get_close(data):
+
+    if data is None or data.empty:
+        return pd.Series(dtype="float64")
+
+    c = data["Close"]
+
+    if isinstance(c, pd.DataFrame):
+        c = c.iloc[:,0]
+
+    return pd.to_numeric(c, errors="coerce").dropna()
+
+
 def scan_assets():
 
-    results = []
+    resultados = []
 
     for ticker in ASSETS:
 
         try:
 
-            data = yf.download(ticker, period="6mo")
+            data = yf.download(
+                ticker,
+                period="12mo",
+                interval="1d",
+                progress=False
+            )
 
-            ma50 = data["Close"].rolling(50).mean().iloc[-1]
-            ma200 = data["Close"].rolling(200).mean().iloc[-1]
-            price = data["Close"].iloc[-1]
+            close = _get_close(data)
+
+            if len(close) < 50:
+                continue
+
+            precio = float(close.iloc[-1])
+
+            ma50 = close.rolling(50).mean().iloc[-1]
+
+            momentum = (precio / float(close.iloc[-60])) - 1
 
             score = 0
 
-            if price > ma50:
+            if precio > ma50:
                 score += 3
-
-            if ma50 > ma200:
-                score += 3
-
-            momentum = (price / data["Close"].iloc[0]) - 1
 
             if momentum > 0:
-                score += 4
+                score += 3
 
-            results.append((ticker, score))
+            if momentum > 0.10:
+                score += 2
 
-        except:
-            pass
+            if momentum > 0.20:
+                score += 2
 
-    ranking = sorted(results, key=lambda x: x[1], reverse=True)
+            resultados.append((ticker, score))
 
-    return ranking[:10]
+        except Exception as e:
+
+            print("scanner error", ticker, e)
+
+    resultados = sorted(resultados, key=lambda x: x[1], reverse=True)
+
+    return resultados[:5]

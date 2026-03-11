@@ -1,51 +1,36 @@
-def generar_estrategia(macro, noticias):
+def generar_estrategia_ia(macro, cartera, noticias):
 
-    estrategia = ""
+    texto = ""
 
-    if "RISK_ON" in macro:
+    if "iran" in noticias.lower() or "war" in noticias.lower():
 
-        estrategia += """
-📈 Estrategia sugerida
+        texto += "⚠ Riesgo geopolítico detectado en noticias\n"
+        texto += "Mercados pueden volverse volátiles\n"
+        texto += "Reducir exposición a riesgo\n\n"
 
-Mercado en modo RISK ON.
+    if "inflation" in noticias.lower():
 
-Sugerencias:
-- Priorizar acciones de crecimiento
-- Tecnología y semiconductores
-- Reducir exposición a oro
-"""
+        texto += "Inflación relevante en noticias\n\n"
 
-    elif "RISK_OFF" in macro:
+    bajistas = 0
+    alcistas = 0
 
-        estrategia += """
-⚠ Estrategia defensiva
+    for a in cartera:
 
-Mercado en modo RISK OFF.
+        if a["signal"] == "alcista":
+            alcistas += 1
 
-Sugerencias:
-- Aumentar liquidez
-- Considerar oro
-- Reducir exposición a acciones cíclicas
-"""
+        if a["signal"] == "bajista":
+            bajistas += 1
+
+    if bajistas > alcistas:
+
+        texto += "Mercado defensivo\n"
+        texto += "Priorizar liquidez y activos refugio\n"
 
     else:
 
-        estrategia += """
-📊 Estrategia neutral
+        texto += "Mercado con momentum positivo\n"
+        texto += "Se pueden buscar oportunidades\n"
 
-Mercado sin dirección clara.
-
-Sugerencias:
-- Mantener cartera diversificada
-- Esperar confirmaciones de tendencia
-"""
-
-    if "inflation" in str(noticias).lower():
-
-        estrategia += "\n⚠ Riesgo inflacionario detectado en noticias."
-
-    if "war" in str(noticias).lower():
-
-        estrategia += "\n⚠ Riesgo geopolítico detectado."
-
-    return estrategia
+    return texto
