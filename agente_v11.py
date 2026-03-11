@@ -30,15 +30,20 @@ def enviar_telegram(msg):
 
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 
-    try:
-        requests.post(url, data={
-            "chat_id": CHAT_ID,
-            "text": msg[:4000]
-        })
+    partes = [msg[i:i+4000] for i in range(0, len(msg), 4000)]
 
-    except Exception as e:
-        print("Error telegram:", e)
+    for parte in partes:
 
+        try:
+
+            requests.post(url, data={
+                "chat_id": CHAT_ID,
+                "text": parte
+            })
+
+        except Exception as e:
+
+            print("Error telegram:", e)
 
 # -------------------
 # AGENTE PRINCIPAL
@@ -46,7 +51,7 @@ def enviar_telegram(msg):
 
 def run_agent():
 
-    print("===== AGENTE FINANCIERO V11 =====")
+    print("===== AGENTE FINANCIERO V11 INSTITUTIONAL =====")
 
     report = "📊 AGENTE FINANCIERO V11\n\n"
 
