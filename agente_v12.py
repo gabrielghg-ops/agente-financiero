@@ -8,6 +8,7 @@ from noticias import analizar_noticias
 
 from macro.macro_engine import analizar_macro_global
 from macro.macro_risk_model import calcular_risk_score
+from macro.market_theme_detector import detectar_market_theme
 
 from ai.ai_portfolio import analizar_cartera_ia
 from ai.ai_strategy import generar_estrategia_ia
@@ -32,7 +33,7 @@ CHAT_ID = os.environ["CHAT_ID"]
 
 def enviar_telegram(msg):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    partes = [msg[i:i+4000] for i in range(0, len(msg), 4000)]
+    partes = [msg[i:i + 4000] for i in range(0, len(msg), 4000)]
 
     for parte in partes:
         try:
@@ -64,6 +65,15 @@ def run_agent():
     radar = "Sin datos disponibles"
     sectors = []
     resultados = []
+    theme = {
+        "theme": "Sin tema dominante claro",
+        "confidence": 0,
+        "bias": "NEUTRAL",
+        "drivers": [],
+        "favored_assets": [],
+        "harmed_assets": [],
+        "summary_es": "No se pudo detectar un tema dominante del mercado."
+    }
 
     # -------------------
     # MACRO
@@ -133,8 +143,8 @@ def run_agent():
         crash = detect_crash_risk()
 
         report += "⚠️ CRASH RISK\n\n"
-        report += f"Score: {crash['crash_score']}\n"
-        report += f"Nivel: {crash['crash_risk']}\n\n"
+        report += f"Score: {crash.get('crash_score', 'N/D')}\n"
+        report += f"Nivel: {crash.get('crash_risk', 'N/D')}\n\n"
 
     except Exception as e:
         print("Error crash detector:", e)
@@ -148,9 +158,9 @@ def run_agent():
         forecast = macro_forecast()
 
         report += "🔮 MACRO FORECAST\n\n"
-        report += f"Risk On: {forecast['risk_on']}%\n"
-        report += f"Neutral: {forecast['neutral']}%\n"
-        report += f"Risk Off: {forecast['risk_off']}%\n\n"
+        report += f"Risk On: {forecast.get('risk_on', 0)}%\n"
+        report += f"Neutral: {forecast.get('neutral', 0)}%\n"
+        report += f"Risk Off: {forecast.get('risk_off', 0)}%\n\n"
 
     except Exception as e:
         print("Error forecast:", e)
@@ -164,7 +174,7 @@ def run_agent():
         radar = radar_global()
 
         report += "🌎 RADAR GLOBAL\n\n"
-        report += str(radar) + "\n\n"
+        report += f"{str(radar)}\n\n"
 
     except Exception as e:
         print("Error radar:", e)
@@ -186,6 +196,31 @@ def run_agent():
 
     except Exception as e:
         print("Error rotación:", e)
+
+    # -------------------
+    # MARKET THEME DETECTOR
+    # -------------------
+    print("Detectando tema dominante del mercado...")
+
+    try:
+        theme = detectar_market_theme(macro, noticias_texto, sectors)
+
+        report += "🧠 MARKET THEME\n\n"
+        report += f"Tema dominante: {theme.get('theme', 'N/D')}\n"
+        report += f"Confianza: {theme.get('confidence', 0)}%\n"
+        report += f"Sesgo: {theme.get('bias', 'NEUTRAL')}\n"
+        report += (
+            f"Drivers: {', '.join(theme.get('drivers', [])) if theme.get('drivers') else 'Sin drivers claros'}\n"
+        )
+        report += (
+            f"Favorece: {', '.join(theme.get('favored_assets', [])) if theme.get('favored_assets') else 'N/D'}\n"
+        )
+        report += (
+            f"Perjudica: {', '.join(theme.get('harmed_assets', [])) if theme.get('harmed_assets') else 'N/D'}\n\n"
+        )
+
+    except Exception as e:
+        print("Error market theme detector:", e)
 
     # -------------------
     # SCANNER GLOBAL
@@ -212,9 +247,14 @@ def run_agent():
     # -------------------
     # CARTERA
     # -------------------
-    cartera = obtener_cartera()
-
+    print("Analizando cartera...")
     report += "📈 CARTERA\n\n"
+
+    try:
+        cartera = obtener_cartera()
+    except Exception as e:
+        print("Error obteniendo cartera:", e)
+        cartera = []
 
     for ticker in cartera:
         print("Analizando", ticker)
@@ -225,12 +265,12 @@ def run_agent():
             if r:
                 resultados.append(r)
 
-                report += f"""
-{r['ticker']}
-Precio: {r['price']}
-MA50: {r['ma50']}
-Señal: {r['signal']}
-"""
+                report += (
+                    f"{r.get('ticker', 'N/D')}\n"
+                    f"Precio: {r.get('price', 'N/D')}\n"
+                    f"MA50: {r.get('ma50', 'N/D')}\n"
+                    f"Señal: {r.get('signal', 'N/D')}\n\n"
+                )
 
         except Exception as e:
             print("Error activo:", ticker, e)
@@ -243,8 +283,8 @@ Señal: {r['signal']}
     try:
         analisis_cartera = analizar_cartera_ia(resultados)
 
-        report += "\n🧠 IA CARTERA\n"
-        report += str(analisis_cartera)
+        report += "🧠 IA CARTERA\n"
+        report += f"{str(analisis_cartera)}\n"
 
     except Exception as e:
         print("Error IA cartera:", e)
@@ -255,14 +295,21 @@ Señal: {r['signal']}
     print("Generando estrategia IA...")
 
     try:
-        estrategia = generar_estrategia_ia(macro, resultados, noticias_texto)
+        estrategia = generar_estrategia_ia(
+            macro,
+            resultados,
+            noticias_texto,
+            theme.get("summary_es", "")
+        )
 
-        report += "\n\n📊 ESTRATEGIA IA\n"
+        report += "\n📊 ESTRATEGIA IA\n"
 
         if estrategia and str(estrategia).strip():
             report += str(estrategia)
         else:
             report += "Sin cambios estratégicos destacados por el momento"
+
+        report += "\n"
 
     except Exception as e:
         print("Error estrategia IA:", e)
@@ -270,12 +317,14 @@ Señal: {r['signal']}
     # -------------------
     # ALERTAS
     # -------------------
+    print("Revisando alertas...")
+
     try:
         alertas = revisar_alertas()
 
         if alertas:
-            report += "\n\n🚨 ALERTAS\n"
-            report += str(alertas)
+            report += "\n🚨 ALERTAS\n"
+            report += f"{str(alertas)}\n"
 
     except Exception as e:
         print("Error alertas:", e)
@@ -283,6 +332,8 @@ Señal: {r['signal']}
     # -------------------
     # INFORME FINAL
     # -------------------
+    print("Generando informe final...")
+
     try:
         informe = generar_informe_final(
             macro=macro,
@@ -290,7 +341,7 @@ Señal: {r['signal']}
             cartera=resultados,
             risk_score=risk_score,
             crash=crash,
-            noticias=noticias_texto
+            noticias=noticias_texto + "\n\n" + theme.get("summary_es", "")
         )
 
         if informe and str(informe).strip():
