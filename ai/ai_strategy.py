@@ -7,16 +7,6 @@ except Exception:
 
 
 def generar_estrategia_ia(macro, resultados, noticias, theme_summary=None):
-    """
-    Genera una estrategia de mercado usando:
-    - datos macro
-    - análisis de cartera
-    - noticias
-    - tema dominante de mercado (opcional)
-
-    Devuelve texto listo para agregar al reporte.
-    """
-
     macro = macro or {}
     resultados = resultados or []
     noticias = noticias or "Sin noticias relevantes"
@@ -34,6 +24,9 @@ def generar_estrategia_ia(macro, resultados, noticias, theme_summary=None):
         "Tu tarea es generar una estrategia clara, breve y accionable en español. "
         "Debes priorizar gestión de riesgo, contexto macro, rotación sectorial y protección de capital. "
         "No inventes datos. Usa solamente la información proporcionada. "
+        "No clasifiques un ticker dentro de un sector si no está explícitamente indicado. "
+        "No digas que un ETF país pertenece a energía, tecnología o materiales salvo que eso esté claramente informado. "
+        "Si no estás seguro del sector de un activo, menciónalo solo por ticker o evita clasificarlo. "
         "El tono debe ser profesional, directo y útil para un reporte automatizado."
     )
 
@@ -52,6 +45,12 @@ TEMA DOMINANTE DEL MERCADO:
 CARTERA ANALIZADA:
 {resumen_cartera}
 
+Reglas obligatorias:
+- No inventar sectores ni etiquetas para tickers ambiguos.
+- Si mencionas ejemplos, usa solo activos cuya naturaleza sea clara.
+- Prioriza conclusiones macro y de gestión de riesgo.
+- Sé concreto y sin relleno.
+
 Quiero que respondas con este formato:
 
 1. SESGO GENERAL
@@ -66,7 +65,7 @@ Quiero que respondas con este formato:
 4. ACCIÓN PRÁCTICA
 - Qué haría un gestor prudente en este contexto
 
-Sé concreto. No uses relleno. Máximo 220 palabras.
+Máximo 220 palabras.
 """
 
     try:
@@ -78,7 +77,7 @@ Sé concreto. No uses relleno. Máximo 220 palabras.
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0.4,
+            temperature=0.25,
             max_tokens=350,
         )
 
@@ -95,9 +94,6 @@ Sé concreto. No uses relleno. Máximo 220 palabras.
 
 
 def construir_resumen_cartera(resultados):
-    """
-    Convierte la cartera analizada en un resumen simple para el prompt.
-    """
     if not resultados:
         return "No hay activos analizados en cartera."
 
@@ -109,17 +105,12 @@ def construir_resumen_cartera(resultados):
         ma50 = r.get("ma50", "N/D")
         signal = r.get("signal", "N/D")
 
-        lineas.append(
-            f"- {ticker} | Precio: {price} | MA50: {ma50} | Señal: {signal}"
-        )
+        lineas.append(f"- {ticker} | Precio: {price} | MA50: {ma50} | Señal: {signal}")
 
     return "\n".join(lineas)
 
 
 def estrategia_fallback(macro, resultados, noticias, theme_summary=""):
-    """
-    Estrategia simple de respaldo si OpenAI falla o no está configurado.
-    """
     theme_text = (theme_summary or "").lower()
 
     alcistas = 0
@@ -127,7 +118,6 @@ def estrategia_fallback(macro, resultados, noticias, theme_summary=""):
 
     for r in resultados or []:
         signal = str(r.get("signal", "")).lower()
-
         if "alc" in signal or "bull" in signal:
             alcistas += 1
         elif "baj" in signal or "bear" in signal:
@@ -135,7 +125,6 @@ def estrategia_fallback(macro, resultados, noticias, theme_summary=""):
 
     vix = extraer_numero(macro.get("VIX", 0))
     dxy = extraer_numero(macro.get("DXY", 0))
-    oro = extraer_numero(macro.get("ORO", 0))
     petroleo = extraer_numero(macro.get("PETROLEO", 0))
 
     bias = "NEUTRAL"
@@ -145,31 +134,31 @@ def estrategia_fallback(macro, resultados, noticias, theme_summary=""):
 
     if "risk off" in theme_text or vix >= 22 or "flight to safety" in theme_text:
         bias = "Defensivo / Risk Off"
-        favorecer.extend(["liquidez", "oro", "exposición defensiva", "gestión de riesgo"])
-        evitar.extend(["tecnología agresiva", "activos muy volátiles", "sobreexposición a beta alta"])
+        favorecer.extend(["oro", "liquidez", "energía", "exposición defensiva"])
+        evitar.extend(["tecnología agresiva", "cripto", "beta alta"])
         accion.append("Reducir exposición táctica en activos de alto riesgo.")
-        accion.append("Priorizar preservación de capital y entradas selectivas.")
+        accion.append("Preservar capital y priorizar activos defensivos.")
 
-    elif "inflación" in theme_text or petroleo > 80:
+    elif "inflación" in theme_text or petroleo > 85:
         bias = "Inflacionario / Selectivo"
-        favorecer.extend(["energía", "commodities", "metales", "activos reales"])
-        evitar.extend(["bonos largos", "crecimiento muy sensible a tasas"])
+        favorecer.extend(["energía", "commodities", "metales"])
+        evitar.extend(["bonos largos", "crecimiento sensible a tasas"])
         accion.append("Favorecer sectores vinculados a materias primas.")
-        accion.append("Evitar sobrecargar posiciones sensibles a tasas largas.")
+        accion.append("Evitar sobreexposición a duración larga.")
 
     elif "tecnológico" in theme_text or "ai" in theme_text:
         bias = "Risk On con liderazgo tecnológico"
         favorecer.extend(["tecnología", "semiconductores", "crecimiento líder"])
-        evitar.extend(["sectores rezagados sin momentum"])
-        accion.append("Mantener exposición selectiva en liderazgo tecnológico.")
-        accion.append("Evitar perseguir activos extendidos sin confirmación.")
+        evitar.extend(["activos sin momentum", "sectores rezagados"])
+        accion.append("Mantener exposición selectiva al liderazgo tecnológico.")
+        accion.append("Evitar perseguir precios extendidos sin confirmación.")
 
     else:
         bias = "Neutral / Mixto"
         favorecer.extend(["selectividad", "diversificación", "seguimiento de tendencia"])
         evitar.extend(["concentración excesiva", "operaciones impulsivas"])
         accion.append("Esperar confirmación antes de aumentar riesgo.")
-        accion.append("Mantener cartera balanceada y revisar fortaleza relativa.")
+        accion.append("Mantener cartera balanceada.")
 
     if bajistas > alcistas:
         accion.append("La cartera muestra más debilidad que fortaleza; conviene revisar posiciones débiles.")
@@ -177,11 +166,7 @@ def estrategia_fallback(macro, resultados, noticias, theme_summary=""):
         accion.append("La cartera mantiene mejor tono interno; se puede sostener exposición con control de riesgo.")
 
     if dxy >= 104:
-        evitar.append("emergentes débiles frente a dólar fuerte")
-
-    if oro and oro > 0 and ("risk off" in theme_text or "inflación" in theme_text):
-        if "oro" not in favorecer:
-            favorecer.append("oro")
+        evitar.append("emergentes presionados por dólar fuerte")
 
     favorecer = unique_keep_order(favorecer)
     evitar = unique_keep_order(evitar)
