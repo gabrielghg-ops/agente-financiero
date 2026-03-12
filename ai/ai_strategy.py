@@ -25,8 +25,10 @@ def generar_estrategia_ia(macro, resultados, noticias, theme_summary=None):
         "Debes priorizar gestión de riesgo, contexto macro, rotación sectorial y protección de capital. "
         "No inventes datos. Usa solamente la información proporcionada. "
         "No clasifiques un ticker dentro de un sector si no está explícitamente indicado. "
-        "No digas que un ETF país pertenece a energía, tecnología o materiales salvo que eso esté claramente informado. "
-        "Si no estás seguro del sector de un activo, menciónalo solo por ticker o evita clasificarlo. "
+        "No reformules libremente el sesgo de mercado. "
+        "Usa solo estas etiquetas cuando corresponda: RISK ON, NEUTRAL, NEUTRAL-RISK OFF, RISK OFF. "
+        "No uses expresiones como 'riesgo bajo' si el contexto no lo indica. "
+        "No sugieras derivados, opciones ni coberturas complejas salvo que la información lo pida explícitamente. "
         "El tono debe ser profesional, directo y útil para un reporte automatizado."
     )
 
@@ -47,8 +49,10 @@ CARTERA ANALIZADA:
 
 Reglas obligatorias:
 - No inventar sectores ni etiquetas para tickers ambiguos.
-- Si mencionas ejemplos, usa solo activos cuya naturaleza sea clara.
-- Prioriza conclusiones macro y de gestión de riesgo.
+- No reformular libremente el sesgo de mercado.
+- Si el contexto es defensivo, dilo de forma clara.
+- No recomendar opciones, derivados ni coberturas complejas.
+- Prioriza conclusiones macro y gestión de riesgo.
 - Sé concreto y sin relleno.
 
 Quiero que respondas con este formato:
@@ -77,7 +81,7 @@ Máximo 220 palabras.
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0.25,
+            temperature=0.2,
             max_tokens=350,
         )
 
@@ -133,28 +137,28 @@ def estrategia_fallback(macro, resultados, noticias, theme_summary=""):
     accion = []
 
     if "risk off" in theme_text or vix >= 22 or "flight to safety" in theme_text:
-        bias = "Defensivo / Risk Off"
+        bias = "RISK OFF"
         favorecer.extend(["oro", "liquidez", "energía", "exposición defensiva"])
         evitar.extend(["tecnología agresiva", "cripto", "beta alta"])
         accion.append("Reducir exposición táctica en activos de alto riesgo.")
         accion.append("Preservar capital y priorizar activos defensivos.")
 
     elif "inflación" in theme_text or petroleo > 85:
-        bias = "Inflacionario / Selectivo"
+        bias = "NEUTRAL-RISK OFF"
         favorecer.extend(["energía", "commodities", "metales"])
         evitar.extend(["bonos largos", "crecimiento sensible a tasas"])
         accion.append("Favorecer sectores vinculados a materias primas.")
         accion.append("Evitar sobreexposición a duración larga.")
 
     elif "tecnológico" in theme_text or "ai" in theme_text:
-        bias = "Risk On con liderazgo tecnológico"
+        bias = "RISK ON"
         favorecer.extend(["tecnología", "semiconductores", "crecimiento líder"])
         evitar.extend(["activos sin momentum", "sectores rezagados"])
         accion.append("Mantener exposición selectiva al liderazgo tecnológico.")
         accion.append("Evitar perseguir precios extendidos sin confirmación.")
 
     else:
-        bias = "Neutral / Mixto"
+        bias = "NEUTRAL"
         favorecer.extend(["selectividad", "diversificación", "seguimiento de tendencia"])
         evitar.extend(["concentración excesiva", "operaciones impulsivas"])
         accion.append("Esperar confirmación antes de aumentar riesgo.")
